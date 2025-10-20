@@ -26,7 +26,7 @@ public class ParkingApiController {
 
     /**
      * 駐車証No.または駐車位置を更新するAPIエンドポイント
-     * @param payload {id: '1', field: 'parkingPermit'/'parkingPosition', value: '15'}
+     * @param payload {id: '1', field: 'parkingPermit'/'parkingPosition', value: '15' または ''}
      */
     @PostMapping("/update")
     public ResponseEntity<Map<String, String>> updateParkingField(@RequestBody Map<String, String> payload) {
@@ -39,10 +39,10 @@ public class ParkingApiController {
         // 1. リクエストボディからデータ取得
         String idStr = payload.get("id");
         String field = payload.get("field");
-        String value = payload.get("value");
+        String valueStr = payload.get("value"); 
         
-        if (idStr == null || field == null || value == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "必須データが不足しています。"));
+        if (idStr == null || field == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "必須データ（IDまたはフィールド名）が不足しています。"));
         }
         
         try {
@@ -59,13 +59,24 @@ public class ParkingApiController {
             Parking parking = optionalParking.get();
             
             // 3. フィールド名に応じて対応するプロパティを更新
+            
+            // 値が空文字またはnullであるかチェック
+            boolean isValueBlank = (valueStr == null || valueStr.trim().isEmpty());
+            
+            // データベースのString型フィールドに設定する値
+            // JavaScriptから空文字が送られてきた場合、それをnullとして扱う
+            String valueToSet = isValueBlank ? null : valueStr.trim();
+            
             if ("parkingPermit".equals(field)) {
                 // 駐車証No.を更新
-                parking.setParkingPermit(value);
+                // ✅ 修正点: Integerに変換せず、String型のvalueToSetを設定
+                parking.setParkingPermit(valueToSet);
             } else if ("parkingPosition".equals(field)) {
                 // 駐車位置を更新
-                parking.setParkingPosition(value);
+                // ✅ 修正点: Integerに変換せず、String型のvalueToSetを設定
+                parking.setParkingPosition(valueToSet);
             } else {
+                // 他のフィールド処理（もしあれば）...
                 return ResponseEntity.badRequest().body(Map.of("message", "無効なフィールド名です。"));
             }
 
@@ -75,9 +86,11 @@ public class ParkingApiController {
             return ResponseEntity.ok(Map.of("status", "success", "message", "更新が完了しました。"));
             
         } catch (NumberFormatException e) {
+            // IDのInteger変換で失敗した場合のみここに来る（更新値はString型になったため）
             return ResponseEntity.badRequest().body(Map.of("message", "IDの形式が不正です。"));
         } catch (Exception e) {
             System.err.println("DB更新エラー: " + e.getMessage());
+            e.printStackTrace(); 
             return ResponseEntity.internalServerError().body(Map.of("message", "サーバー側で更新中にエラーが発生しました。"));
         }
     }

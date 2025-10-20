@@ -16,9 +16,14 @@
         /* --- タブ（シート名）エリア --- */
         .tabs {
             position: relative;
-            display: flex;
+            /* PC表示: タブとログアウトボタンを横並びにする */
+            display: flex; 
             padding-top: 10px;
             background-color: #e8e8e8;
+            /* PC表示はラップしない */
+            flex-wrap: nowrap; 
+            /* 💡 追加: 縦方向の揃え方を調整できるようにalign-items: flex-end;を設定 */
+            align-items: flex-end;
         }
 
         /* --- タブラベルのスタイル --- */
@@ -35,6 +40,9 @@
             font-size: 14px;
             color: #333;
             transition: background-color 0.2s;
+            /* 💡 追加: ラベル自体も下揃えになるように調整 */
+            align-self: flex-end;
+            margin-bottom: -1px; /* tab-lineとの間に隙間ができないように調整 */
         }
 
         /* ホバー時のスタイル */
@@ -50,6 +58,7 @@
             border-color: #ccc;
             z-index: 2; 
             font-weight: bold;
+            margin-bottom: -1px;
         }
         
         /* タブ下のライン */
@@ -62,6 +71,39 @@
             background-color: #ccc; 
             z-index: 0;
         }
+
+        /* ------------------------------------------- */
+        /* --- 💡 ログアウトボタンのスタイル (PC表示) --- */
+        /* ------------------------------------------- */
+        .tabs .logout-form {
+            /* PC表示: 右端に寄せ、下揃えを維持 */
+            margin-left: auto; 
+            padding-right: 15px;
+            /* 💡 修正: align-itemsを削除し、親の.tabsのalign-items: flex-endを継承 */
+            display: flex; 
+            /* align-items: flex-end; (親から継承) */
+            height: 100%;
+            z-index: 5;
+            padding-bottom: 5px; /* タブの底辺と合わせるために調整 */
+        }
+
+        .tabs .logout-button {
+            padding: 5px 12px;
+            background-color: #dc3545; 
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            white-space: nowrap; 
+        }
+
+        .tabs .logout-button:hover {
+            background-color: #c82333; 
+        }
+        /* ------------------------------------------- */
 
         /* --- タブの内容（シート）エリア --- */
         .tab-contents {
@@ -94,7 +136,8 @@
             margin-bottom: 20px;
         }
         
-        /* === Excel風テーブルのスタイル（折り返し対応） === */
+        /* === Excel風テーブルのスタイル（折り返し対応版） === */
+        /* ... (PC/テーブルのスタイルは省略せず保持) ... */
         .excel-table {
             width: 100%; 
             border-collapse: collapse; 
@@ -392,6 +435,46 @@
                 background-color: transparent; 
             }
             
+            /* ------------------------------------------- */
+            /* 💡 モバイル時のログアウトボタンの配置調整 (再修正) */
+            /* ------------------------------------------- */
+            .tabs {
+                /* タブのラベルを左寄せにするため、padding-top以外は0にする */
+                padding: 10px 0 0 0; 
+                /* flex-wrap: nowrap; を維持して横並びを強制 */
+                flex-wrap: nowrap;
+                /* align-items: flex-end; を継承し、下揃えを維持 */
+            }
+            
+            .tabs .tab-label {
+                 /* モバイルでは横並びのタブを少し小さくする */
+                 padding: 6px 10px;
+                 font-size: 13px;
+                 margin-bottom: -1px; /* 下揃えを維持 */
+            }
+            
+            .tabs .logout-form {
+                /* 💡 修正: タブと同じ行の右端に寄せる */
+                margin-left: auto;
+                order: initial; /* 順序をリセット */
+                width: auto; 
+                
+                /* 💡 修正: 上下のpaddingを調整してタブのラベルの下端に揃える */
+                padding: 0 10px 4px 5px; 
+                
+                display: flex;
+                align-items: flex-end; /* ボタンをフォームの下端に揃える */
+                
+                border-top: none; /* タブとの区切り線を削除 */
+            }
+            
+            .tabs .logout-button {
+                /* ボタンのサイズを調整 */
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+            /* ------------------------------------------- */
+            
             /* 2. すべてのセル(td)の基本スタイル - 2列表示をデフォルトとする */
             .excel-table td {
                 float: left !important; 
@@ -605,3 +688,73 @@
                 cursor: pointer;
             }
         }
+
+/* ========================================================== */
+/* 💡 新規追加: ログインフォームのレスポンシブスタイル */
+/* ========================================================== */
+body {
+    /* 画面いっぱいに広げ、フォームを垂直・水平中央に配置 */
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4; /* 背景色を設定（任意） */
+    display: flex;
+    justify-content: center; /* 水平中央寄せ */
+    align-items: center; /* 垂直中央寄せ */
+    min-height: 100vh; /* 画面の高さいっぱいに広げる */
+}
+.login-container { 
+    /* PCでの最大幅を設定し、モバイルでは画面幅に合わせる */
+    width: 90%; /* モバイルで画面の90%を使用 */
+    max-width: 400px; /* PCでの最大幅を制限 */
+    
+    margin: auto; 
+    padding: 30px; /* パディングを増やしてゆとりを持たせる */
+    
+    border: 1px solid #ccc; 
+    border-radius: 8px; /* 角を丸くする */
+    background-color: white; /* フォームの背景色 */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を追加 */
+}
+/* H1タグのスタイルは、このCSSの他のH2などと競合しないためそのまま追加 */
+.login-container h1 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #333;
+}
+.form-group { 
+    margin-bottom: 20px; 
+}
+label { 
+    display: block; 
+    margin-bottom: 5px; 
+    font-weight: bold; 
+}
+/* inputのパディングを増やし、フォントサイズを大きくしてタッチしやすく */
+input[type="text"], input[type="password"] { 
+    width: 100%; 
+    padding: 10px; /* パディングを増やす */
+    font-size: 16px; /* フォントサイズを大きく */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; 
+}
+.login-container button { 
+    width: 100%; 
+    padding: 12px; 
+    background-color: #007bff; 
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    border-radius: 4px;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+.login-container button:hover {
+    background-color: #0056b3;
+}
+.error-message { 
+    color: red; 
+    margin-bottom: 15px; 
+    text-align: center; 
+    font-weight: bold; 
+}

@@ -1,7 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
 	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="_csrf" th:content="${_csrf.token}">
+	<meta name="_csrf_header" th:content="${_csrf.headerName}">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Excel風タブレイアウト（折り返し対応版）</title>
 	    
@@ -10,7 +13,7 @@
 	          href="/css/style.css">
 
 </head>
-<body>
+<body th:data-user-role="${#authorization.expression('hasAuthority(''ADMIN'')') ? 'ADMIN' : 'USER'}">
 	
 	<div id="custom-tooltip" class="custom-tooltip"></div>
 	<div class="excel-container">
@@ -23,6 +26,10 @@
 	        <label for="tab1" class="tab-label">駐車場予約リスト</label>
 	        <label for="tab2" class="tab-label">来館者予約リスト</label>
 	        <label for="tab3" class="tab-label">送迎バス運行リスト</label>
+	        
+	        <form th:action="@{/logout}" method="post" class="logout-form">
+	            <button type="submit" class="logout-button">ログアウト</button>
+	        </form>
 	        
 	        <div class="tab-line"></div>
 	    </div>
@@ -108,14 +115,14 @@
 			                                th:text="${#temporals.format(parking.updateTime, 'yyyy/MM/dd HH:mm')}">
 			                            </td>
 			                            
-			                            <td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${parking.id}">
-			                                <span class="remarks-text" th:text="${parking.remarksColumn}"></span>
-			                                
-			                                <div class="remarks-edit-form" style="display: none;">
-			                                    <textarea class="remarks-textarea" th:data-original-value="${parking.remarksColumn}" th:text="${parking.remarksColumn}"></textarea>
-			                                    <button type="submit" class="update-remarks-button">更新</button>
-			                                </div>
-			                            </td>
+										<td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${parking.id}">
+										    <span class="remarks-text" th:text="${parking.remarksColumn}"></span>
+										    
+										    <form class="remarks-edit-form" style="display: none; visibility: hidden;">
+										        <textarea class="remarks-textarea" th:data-original-value="${parking.remarksColumn}" th:text="${parking.remarksColumn}"></textarea>
+										        <button type="submit" class="update-remarks-button">更新</button>
+										        </form>
+										</td>
 			                        </tr>
 			                        <tr th:if="${#lists.isEmpty(parkings)}" class="no-data-row">
 			                            <td colspan="13">登録されている駐車場予約データはありません (PC)</td>

@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
-<head>
+<html lang="ja" 
+      xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"> <head>
     <meta charset="UTF-8">
     <title>従業員一覧</title>
     <style>
         table { border-collapse: collapse; width: 80%; margin: 20px auto; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
+        .links-container { 
+            width: 80%; 
+            margin: 20px auto; 
+            display: flex; /* リンクを横並びにするためにFlexboxを使用 */
+            gap: 20px;
+        }
     </style>
 </head>
 <body>
@@ -35,6 +42,12 @@
         </tbody>
     </table>
     
-    <a href="/employees/new">新規従業員登録</a>
+	<div class="links-container">
+	    <a th:href="@{/employees/new}">新規従業員登録</a>
+
+	    <a th:href="@{/admin/dashboard}" sec:authorize="hasRole('ADMIN')" style="color: red; font-weight: bold;">
+	        管理者ダッシュボードへ
+	    </a>
+	</div>
 </body>
 </html>

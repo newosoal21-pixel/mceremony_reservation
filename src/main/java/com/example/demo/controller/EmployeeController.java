@@ -1,14 +1,15 @@
 package com.example.demo.controller;
 
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model; // 💡 修正: Spring MVCのModelをインポート
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,48 +19,55 @@ import com.example.demo.model.Employee;
 import com.example.demo.repository.DepartmentRepository;
 import com.example.demo.repository.EmployeeRepository;
 
-@Controller 
+@Controller
 @RequestMapping("/employees")
 public class EmployeeController {
 
-    // 💡 修正: リポジトリのフィールド宣言
-    private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
-
-    // 💡 修正: コンストラクタインジェクションの追加
     @Autowired
-    public EmployeeController(EmployeeRepository employeeRepository, DepartmentRepository departmentRepository) {
+    private EmployeeRepository employeeRepository;
+    
+    // 💡 修正点 1: DepartmentRepositoryの追加
+    @Autowired 
+    private DepartmentRepository departmentRepository; 
+    
+    private final PasswordEncoder passwordEncoder; 
+
+    // 💡 修正点 2: コンストラクタの引数にDepartmentRepositoryを追加
+    public EmployeeController(EmployeeRepository employeeRepository, 
+                              DepartmentRepository departmentRepository, 
+                              PasswordEncoder passwordEncoder) {
         this.employeeRepository = employeeRepository;
-        this.departmentRepository = departmentRepository;
+        this.departmentRepository = departmentRepository; 
+        this.passwordEncoder = passwordEncoder; 
     }
 
     // 1. 一覧表示（GET /employees）
     @GetMapping
-    public String listEmployees(Model model) { // Model型をorg.springframework.ui.Modelに修正
+    public String listEmployees(Model model) {
         List<Employee> employees = employeeRepository.findAll();
         model.addAttribute("employees", employees);
-        return "employee/list"; // employee/list.html を返す
+        return "employee/list";
     }
     
     // 2. 詳細表示・編集フォーム（GET /employees/{id}）
     @GetMapping("/{id}")
-    public String editEmployeeForm(@PathVariable Integer id, Model model) { // Model型をorg.springframework.ui.Modelに修正
+    public String editEmployeeForm(@PathVariable Integer id, Model model) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found for this id :: " + id));
 
-        // 部署選択肢のために全部署を取得
         List<Department> departments = departmentRepository.findAll();
 
         model.addAttribute("employee", employee);
         model.addAttribute("departments", departments);
-        return "employee/detail"; // employee/detail.html を返す
+        return "employee/detail";
     }
     
     // 3. 更新処理（PUT /employees/{id}）
     @PutMapping("/{id}")
     public String updateEmployee(@PathVariable Integer id, 
                                  @ModelAttribute Employee employeeDetails, 
-                                 @RequestParam(required = false) String passwordHash) { // 新しいパスワード
+                                 @RequestParam("department.id") Integer departmentId, 
+                                 @RequestParam(required = false) String passwordHash) { // passwordHashは平文の入力
         
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found for this id :: " + id));
@@ -70,22 +78,68 @@ public class EmployeeController {
         employee.setDeleteFlag(employeeDetails.getDeleteFlag());
 
         // 部署 (外部キー) の処理
-        // 💡 注意: employeeDetails.getDepartment()がnullでないことを確認してください
-        if (employeeDetails.getDepartment() != null) {
-            Department department = departmentRepository.findById(employeeDetails.getDepartment().getId())
-                    .orElseThrow(() -> new RuntimeException("Department not found for id :: " + employeeDetails.getDepartment().getId()));
+        if (departmentId != null && departmentId > 0) {
+            Department department = departmentRepository.findById(departmentId)
+                    .orElseThrow(() -> new RuntimeException("Department not found for id :: " + departmentId));
             employee.setDepartment(department);
+        } else {
+            throw new RuntimeException("Department selection is required for update.");
         }
 
-        // パスワードハッシュの更新（入力があった場合のみ）
+        // 💡 修正点 3: 更新時、パスワードが入力された場合のみハッシュ化して保存
         if (passwordHash != null && !passwordHash.isEmpty()) {
-            // 🚨 実際にはここでパスワードをハッシュ化する処理が必要です 🚨
-            employee.setPasswordHash(passwordHash); 
+            String encodedPassword = passwordEncoder.encode(passwordHash);
+            employee.setPasswordHash(encodedPassword); 
         }
 
         employeeRepository.save(employee);
         
-        // 更新後、一覧画面にリダイレクト
+        return "redirect:/employees";
+    }
+    
+ 
+	// 4. 新規登録フォームの表示（GET /employees/new）
+	@GetMapping("/new")
+	public String newEmployeeForm(Model model) {
+	    model.addAttribute("employee", new Employee());
+	    
+	    List<Department> departments = departmentRepository.findAll();
+	    model.addAttribute("departments", departments);
+	    
+	    return "employee/new";
+	}
+	 
+	
+	// 5. 新規登録処理（POST /employees）
+    @PostMapping
+    public String createEmployee(@ModelAttribute Employee employee, 
+                                 @RequestParam("departmentId") Integer departmentId, 
+                                 @RequestParam("passwordHash") String plainPassword, 
+                                 Model model) {
+
+        // 1. パスワードのハッシュ化
+        if (plainPassword != null && !plainPassword.isEmpty()) {
+            String hashedPassword = passwordEncoder.encode(plainPassword);
+            employee.setPasswordHash(hashedPassword); // ハッシュ値を設定
+        } else {
+            // パスワードが必須の場合は、ここでエラー処理を行いフォームに戻す
+            // 例: model.addAttribute("employee", employee);
+            //     model.addAttribute("errorMessage", "パスワードは必須です。");
+            //     return "employee/new";
+        }
+        
+        // 2. 部署の処理
+        if (departmentId != null && departmentId > 0) {
+            Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Department not found for id :: " + departmentId));
+            employee.setDepartment(department);
+        } else {
+            // エラー処理
+        }
+        
+        // 3. 保存
+        employeeRepository.save(employee);
+        
         return "redirect:/employees";
     }
 }

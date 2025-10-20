@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>管理者ダッシュボード</title>
+</head>
+<body>
+    <h1>管理者ダッシュボード</h1>
+    <p>あなたは管理者としてログインしています。</p>
+    
+    <a th:href="@{/employees}">従業員一覧へ</a>
+    
+    <br>
+    <a th:href="@{/dashboard}">一般ユーザーダッシュボードへ</a>
+	<form th:action="@{/logout}" method="post">
+	    <button type="submit" style="padding: 5px 10px; cursor: pointer;">ログアウト</button>
+	</form>
+    <br>
+</body>
+</html>
