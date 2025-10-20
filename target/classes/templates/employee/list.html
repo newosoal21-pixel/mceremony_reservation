@@ -45,9 +45,11 @@
 	<div class="links-container">
 	    <a th:href="@{/employees/new}">新規従業員登録</a>
 
-	    <a th:href="@{/admin/dashboard}" sec:authorize="hasRole('ADMIN')" style="color: red; font-weight: bold;">
-	        管理者ダッシュボードへ
-	    </a>
+		<a th:href="@{/admin/dashboard}" 
+		   sec:authorize="hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')" 
+		   style="color: red; font-weight: bold;">
+		    管理者ダッシュボードへ
+		</a>
 	</div>
 </body>
 </html>

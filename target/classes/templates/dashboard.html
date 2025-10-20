@@ -87,7 +87,7 @@
 			                            
 			                            <td data-label="担当" class="group-1-col" th:text="${parking.managerName}"></td>
 			                            
-			                            <td data-label="出庫時刻" class="group-1-col" 
+			                            <td data-label="出庫時刻" class="js-exit-time-field group-1-col" 
 			                                th:text="${parking.departureTime != null ? #temporals.format(parking.departureTime, 'yyyy/MM/dd HH:mm') : ''}">
 			                            </td>
 			                            
@@ -120,7 +120,7 @@
 										    </div>
 										</td>
 			                            
-			                            <td data-label="更新日時" class="group-2-col" 
+			                            <td data-label="更新日時" class="js-update-time-field group-2-col" 
 			                                th:text="${#temporals.format(parking.updateTime, 'yyyy/MM/dd HH:mm')}">
 			                            </td>
 			                            
@@ -130,6 +130,7 @@
 										    <form class="remarks-edit-form" style="display: none; visibility: hidden;">
 										        <textarea class="remarks-textarea" th:data-original-value="${parking.remarksColumn}" th:text="${parking.remarksColumn}"></textarea>
 										        <button type="submit" class="update-remarks-button">更新</button>
+												<button type="button" class="cancel-remarks-button">取消</button>
 										        </form>
 										</td>
 			                        </tr>

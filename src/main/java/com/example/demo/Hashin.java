@@ -7,7 +7,7 @@ public class Hashin {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         
         // 🚨 従業員ごとに平文のパスワードをここに入力します 🚨
-        String plainPassword1 = "admin"; 
+        String plainPassword1 = "superuser"; 
         String plainPassword2 = "ppap"; 
         
         String hashedPassword1 = encoder.encode(plainPassword1);

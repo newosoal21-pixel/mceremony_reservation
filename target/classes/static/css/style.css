@@ -1,729 +1,716 @@
 /* --- レイアウトの基本設定 --- */
-        .excel-container {
-            width: 90%;
-            max-width: 1600px;
-            margin: 40px auto;
-            border: 1px solid #ccc; 
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            background-color: #fff;
-        }
-        
-        /* ラジオボタンは非表示にする */
-        .excel-container input[type="radio"] {
-            display: none;
-        }
+.excel-container {
+    width: 90%;
+    max-width: 1600px;
+    margin: 40px auto;
+    border: 1px solid #ccc; 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+}
 
-        /* --- タブ（シート名）エリア --- */
-        .tabs {
-            position: relative;
-            /* PC表示: タブとログアウトボタンを横並びにする */
-            display: flex; 
-            padding-top: 10px;
-            background-color: #e8e8e8;
-            /* PC表示はラップしない */
-            flex-wrap: nowrap; 
-            /* 💡 追加: 縦方向の揃え方を調整できるようにalign-items: flex-end;を設定 */
-            align-items: flex-end;
-        }
+/* ラジオボタンは非表示にする */
+.excel-container input[type="radio"] {
+    display: none;
+}
 
-        /* --- タブラベルのスタイル --- */
-        .tab-label {
-            padding: 8px 15px;
-            cursor: pointer;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            border-bottom: none; 
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-            margin-right: 2px;
-            z-index: 1; 
-            font-size: 14px;
-            color: #333;
-            transition: background-color 0.2s;
-            /* 💡 追加: ラベル自体も下揃えになるように調整 */
-            align-self: flex-end;
-            margin-bottom: -1px; /* tab-lineとの間に隙間ができないように調整 */
-        }
+/* --- タブ（シート名）エリア --- */
+.tabs {
+    position: relative;
+    /* PC表示: タブとログアウトボタンを横並びにする */
+    display: flex; 
+    padding-top: 10px;
+    background-color: #e8e8e8;
+    /* PC表示はラップしない */
+    flex-wrap: nowrap; 
+    /* 縦方向の揃え方を調整できるようにalign-items: flex-end;を設定 */
+    align-items: flex-end;
+}
 
-        /* ホバー時のスタイル */
-        .tab-label:hover {
-            background-color: #ddd;
-        }
-        
-        /* --- 選択されているタブのスタイル --- */
-        #tab1:checked + .tab-label,
-        #tab2:checked + .tab-label,
-        #tab3:checked + .tab-label {
-            background-color: #ffffff; 
-            border-color: #ccc;
-            z-index: 2; 
-            font-weight: bold;
-            margin-bottom: -1px;
-        }
-        
-        /* タブ下のライン */
-        .tab-line {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background-color: #ccc; 
-            z-index: 0;
-        }
-		
-		/* ----------------------------------------------------
-		   💡 利用状況のテキスト（表示モード）に赤太字を適用
-		   ---------------------------------------------------- */
-		.status-red-bold {
-		    color: red !important; /* 文字色を赤に設定 */
-		    font-weight: bold;     /* 文字を太字に設定 */
-		}
+/* --- タブラベルのスタイル --- */
+.tab-label {
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-bottom: none; 
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    margin-right: 2px;
+    z-index: 1; 
+    font-size: 14px;
+    color: #333;
+    transition: background-color 0.2s;
+    /* ラベル自体も下揃えになるように調整 */
+    align-self: flex-end;
+    margin-bottom: -1px; /* tab-lineとの間に隙間ができないように調整 */
+}
 
-        /* ------------------------------------------- */
-        /* --- 💡 ログアウトボタンのスタイル (PC表示) --- */
-        /* ------------------------------------------- */
-        .tabs .logout-form {
-            /* PC表示: 右端に寄せ、下揃えを維持 */
-            margin-left: auto; 
-            padding-right: 15px;
-            /* 💡 修正: align-itemsを削除し、親の.tabsのalign-items: flex-endを継承 */
-            display: flex; 
-            /* align-items: flex-end; (親から継承) */
-            height: 100%;
-            z-index: 5;
-            padding-bottom: 5px; /* タブの底辺と合わせるために調整 */
-        }
+/* ホバー時のスタイル */
+.tab-label:hover {
+    background-color: #ddd;
+}
 
-        .tabs .logout-button {
-            padding: 5px 12px;
-            background-color: #dc3545; 
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: background-color 0.2s;
-            white-space: nowrap; 
-        }
+/* --- 選択されているタブのスタイル --- */
+#tab1:checked + .tab-label,
+#tab2:checked + .tab-label,
+#tab3:checked + .tab-label {
+    background-color: #ffffff; 
+    border-color: #ccc;
+    z-index: 2; 
+    font-weight: bold;
+    margin-bottom: -1px;
+}
 
-        .tabs .logout-button:hover {
-            background-color: #c82333; 
-        }
-        /* ------------------------------------------- */
+/* タブ下のライン */
+.tab-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #ccc; 
+    z-index: 0;
+}
 
-        /* --- タブの内容（シート）エリア --- */
-        .tab-contents {
-            flex-grow: 1; 
-            padding: 20px;
-            background-color: #ffffff;
-            border-top: none; 
-            display: flex; 
-        }
+/* ----------------------------------------------------
+   利用状況のテキスト（表示モード）に赤太字を適用
+   ---------------------------------------------------- */
+.status-red-bold {
+    color: red !important; /* 文字色を赤に設定 */
+    font-weight: bold;     /* 文字を太字に設定 */
+}
 
-        /* すべての内容をデフォルトで非表示 */
-        .content {
-            display: none;
-            flex-grow: 1; 
-        }
+/* ------------------------------------------- */
+/* --- ログアウトボタンのスタイル (PC表示) --- */
+/* ------------------------------------------- */
+.tabs .logout-form {
+    /* PC表示: 右端に寄せ、下揃えを維持 */
+    margin-left: auto; 
+    padding-right: 15px;
+    display: flex; 
+    height: 100%;
+    z-index: 5;
+    padding-bottom: 5px; /* タブの底辺と合わせるために調整 */
+}
 
-        /* --- 選択されたラジオボタンに対応する内容を表示 --- */
-        #tab1:checked ~ .tab-contents #content1,
-        #tab2:checked ~ .tab-contents #content2,
-        #tab3:checked ~ .tab-contents #content3 {
-            display: block;
-        }
+.tabs .logout-button {
+    padding: 5px 12px;
+    background-color: #dc3545; 
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    white-space: nowrap; 
+}
 
-        /* --- 内容エリアの装飾 --- */
-        h2 {
-            color: #0066cc;
-            border-bottom: 2px solid #0066cc;
-            padding-bottom: 5px;
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-        
-        /* === Excel風テーブルのスタイル（折り返し対応版） === */
-        /* ... (PC/テーブルのスタイルは省略せず保持) ... */
-        .excel-table {
-            width: 100%; 
-            border-collapse: collapse; 
-            font-family: Arial, sans-serif;
-            font-size: 12px; 
-            table-layout: fixed; 
-        }
-        .excel-table th, .excel-table td {
-            border: 1px solid #d4d4d4; 
-            padding: 4px 6px; 
-            text-align: left;
-            
-            /* 【修正ポイント1】セルの最小の高さを設定して行高さを統一 */
-            min-height: 180px; 
-            
-            /* 【修正ポイント2】文字を上端に揃えて、行内の文字開始位置を統一 */
-            vertical-align: top;
+.tabs .logout-button:hover {
+    background-color: #c82333; 
+}
+/* ------------------------------------------- */
 
-            /* 🔴 修正点: 行間を広げる設定を追加 (フォントサイズの1.5倍に設定) */
-            line-height: 1.5; 
-            
-            white-space: normal; 
-            word-wrap: break-word; 
-        }
+/* --- タブの内容（シート）エリア --- */
+.tab-contents {
+    flex-grow: 1; 
+    padding: 20px;
+    background-color: #ffffff;
+    border-top: none; 
+    display: flex; 
+}
 
-        /* 🔴 [追加] 編集可能な全てのTDセルを position: relative に設定 */
-        .excel-table td.js-permit-number,
-        .excel-table td.js-permit-location,
-        .excel-table td.js-parking-status,
-        .excel-table td.js-visit-situation,
-        .excel-table td.js-bus-status,
-        .excel-table td.js-vehicle-number-field,
-        .excel-table td.js-remarks-field {
-            position: relative; 
-            overflow: visible; /* オーバーレイを許可 */
-        }
+/* すべての内容をデフォルトで非表示 */
+.content {
+    display: none;
+    flex-grow: 1; 
+}
 
-        /* 各列の幅を均等に設定し、100%に収める */
-        .excel-table th, .excel-table td {
-            width: 7.14%; 
-        }
+/* --- 選択されたラジオボタンに対応する内容を表示 --- */
+#tab1:checked ~ .tab-contents #content1,
+#tab2:checked ~ .tab-contents #content2,
+#tab3:checked ~ .tab-contents #content3 {
+    display: block;
+}
 
-        /* ヘッダー行のスタイル */
-        .excel-table th {
-            background-color: #f0ffef; 
-            color: #333;
-            font-weight: bold;
-            text-align: center;
-        }
-        .excel-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        /* 特定の列のテキスト配置 */
-        .excel-table th:nth-child(1), .excel-table td:nth-child(1) { text-align: center; width: 4%; } /* 整理番号をさらに狭く */
-        .excel-table th:nth-child(2), .excel-table td:nth-child(2) { font-size: 12px; } /* 日時をさらに小さく */
-        .excel-table th:nth-child(7), .excel-table td:nth-child(7) { text-align: center; } 
-        .excel-table th:nth-child(9), .excel-table td:nth-child(9) { text-align: right; width: 4%; } 
-        .excel-table th:nth-child(10), .excel-table td:nth-child(10) { text-align: right; width: 4%; } 
-        .excel-table th:nth-child(11), .excel-table td:nth-child(11) { text-align: right; width: 4%; }
-        .excel-table th:nth-child(13), .excel-table td:nth-child(13) { font-size: 12px; } /* 日時をさらに小さく */
+/* --- 内容エリアの装飾 --- */
+h2 {
+    color: #0066cc;
+    border-bottom: 2px solid #0066cc;
+    padding-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
 
-        /* --- 編集モードのコンテナ --- */
-        /* 💡 元のCSSに手を加えず、絶対配置用のスタイルを追記/上書き */
-        .edit-mode {
-            /* 元のプロパティを維持 */
-            display: block; 
-            
-            /* 🔴 [追加] 絶対配置の設定 */
-            position: absolute;
-            top: 100%;
-            left: 0;
-            z-index: 10;
-            background: #f8f9fa; 
-            border: 1px solid #ccc;
-            padding: 5px;
-            white-space: nowrap;
-            
-            /* Flexboxで縦並びにする */
-            display: flex; 
-            flex-direction: column;
-            
-            width: auto; 
-            /* 🔴 [修正] 最大幅を親セルの幅に制限 */
-            max-width: 100%;
-            min-width: 0; 
-            box-sizing: border-box; 
-        }
-        
-        /* 🔴 [追加] 駐車場利用状況 (HTML側で定義される編集モード) のスタイル */
-        .excel-table .edit-mode-select {
-            position: absolute;
-            top: 100%; 
-            left: 0;
-            z-index: 10; 
-            background: #f8f9fa; 
-            border: 1px solid #ccc; 
-            padding: 5px; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-            white-space: nowrap;
-            
-            display: flex; 
-            flex-direction: column;
-            
-            width: auto;
-            max-width: 100%;
-            min-width: 0; 
-            box-sizing: border-box;
-        }
+/* === Excel風テーブルのスタイル（PC表示） === */
+.excel-table {
+    width: 100%; 
+    border-collapse: collapse; 
+    font-family: Arial, sans-serif;
+    font-size: 12px; 
+    table-layout: fixed; 
+}
+.excel-table th, .excel-table td {
+    border: 1px solid #d4d4d4; 
+    padding: 4px 6px; 
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5; 
+    white-space: normal; 
+    word-wrap: break-word; 
+}
 
-        /* 🔴 [追加] 備考欄の編集フォームのスタイル */
-        .remarks-edit-form {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            z-index: 10;
-            background: #f8f9fa; 
-            border: 1px solid #ccc;
-            padding: 5px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-            
-            display: flex;
-            flex-direction: column; 
-            width: 100%; /* 親セル幅に合わせる */
-            max-width: 100%;
-            box-sizing: border-box;
-        }
+/* ----------------------------------------------------
+   駐車証No.と駐車位置のセル幅の調整（PC版）
+   ---------------------------------------------------- */
+.excel-table td.js-permit-number,
+.excel-table td.js-permit-location {
+    white-space: normal;    
+    min-width: 50px;        
+    max-width: none;        
+    text-align: center;     
+    overflow: hidden;       
+}
+/* <td>内の表示テキスト（span）の調整 */
+.excel-table td.js-permit-number .permit-number-text,
+.excel-table td.js-permit-location .permit-number-text {
+    display: inline-block;
+    padding: 0 5px; 
+    white-space: normal; 
+}
 
-        /* --- フォーム要素の共通スタイル --- */
-        .permit-select,
-        .situation-select,
-        .bus-status-select,
-        .parking-status-select { 
-            width: 100%; /* 💡 修正: セル幅いっぱいに広げる */
-            box-sizing: border-box; 
-            font-size: 12px; 
-            padding: 2px 0;
-            margin: 0;
-        }
+/* 編集可能な全てのTDセルを position: relative に設定 */
+.excel-table td.js-permit-number,
+.excel-table td.js-permit-location,
+.excel-table td.js-parking-status,
+.excel-table td.js-visit-situation,
+.excel-table td.js-bus-status,
+.excel-table td.js-vehicle-number-field,
+.excel-table td.js-remarks-field {
+    position: relative; 
+    overflow: visible; 
+}
 
-        /* 更新ボタンのスタイル (元のセレクタ) */
-        .update-button { 
-            display: block; 
-            margin-top: 5px; 
-            margin-left: auto; 
-            /* 🔴 [修正] width: 100% を追加して幅を調整 */
-            width: 100%; 
-            box-sizing: border-box;
-            text-align: center;
-        }
-        
-        /* 🔴 [追加] 編集モード内のボタンのスタイル (新しいセレクタ) */
-        .edit-mode button,
-        .edit-mode-select button,
-        .remarks-edit-form button {
-            margin-top: 5px;
-            font-size: 11px;
-            padding: 2px 5px;
-            cursor: pointer;
-            width: 100%; 
-            box-sizing: border-box;
-            text-align: center;
-        }
-        
-        /* 🔴 [修正] 車両ナンバーのフォームの絶対配置と見た目 */
-        .excel-table td .vehicle-number-form {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            z-index: 10;
-            background: #f8f9fa; 
-            border: 1px solid #ccc;
-            padding: 5px;
-            white-space: nowrap;
-            
-            width: auto;
-            max-width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
+/* 各列の幅を均等に設定し、100%に収める (table-layout: fixed; で機能) */
+.excel-table th, .excel-table td {
+    width: 7.14%; 
+}
 
-            display: flex;
-            align-items: center; 
-            gap: 5px;
-        }
-        
-        /* 🔴 [修正] 車両ナンバー欄の入力フォームのスタイル設定 */
-        .excel-table td .vehicle-number-input {
-            width: 100%; 
-            box-sizing: border-box; 
-            border: 1px solid #ccc; 
-            padding: 3px;
-            font-size: 14px; /* モバイル表示のtdに合わせる */
-            margin: 0;
-        }
-        
-        /* 🔴 [追加] 車両ナンバーのフォームをセル内で100%表示 (元のセレクタ) */
-        .excel-table td form {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-        }
-        .excel-table td form input[type="text"] {
-            display: block;
-        }
+/* ヘッダー行のスタイル */
+.excel-table th {
+    background-color: #f0ffef; 
+    color: #333;
+    font-weight: bold;
+    text-align: center;
+}
+.excel-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+/* 特定の列のテキスト配置 */
+.excel-table th:nth-child(1), .excel-table td:nth-child(1) { text-align: center; width: 4%; } /* 整理番号をさらに狭く */
+.excel-table th:nth-child(2), .excel-table td:nth-child(2) { font-size: 12px; } /* 日時をさらに小さく */
+.excel-table th:nth-child(7), .excel-table td:nth-child(7) { text-align: center; } 
+.excel-table th:nth-child(9), .excel-table td:nth-child(9) { text-align: right; width: 4%; } 
+.excel-table th:nth-child(10), .excel-table td:nth-child(10) { text-align: right; width: 4%; } 
+.excel-table th:nth-child(11), .excel-table td:nth-child(11) { text-align: right; width: 4%; }
+.excel-table th:nth-child(13), .excel-table td:nth-child(13) { font-size: 12px; } /* 日時をさらに小さく */
+
+/* --- 編集モードのコンテナ (PC: 絶対配置でドロップダウン) --- */
+.edit-mode {
+    display: block; 
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    background: #f8f9fa; 
+    border: 1px solid #ccc;
+    padding: 5px;
+    white-space: nowrap;
+    
+    /* JS側で display: flex を設定するため、flexboxの縦並びスタイルをCSS側で定義 */
+    display: flex; 
+    flex-direction: column;
+    
+    width: auto; 
+    max-width: 100%;
+    min-width: 0; 
+    box-sizing: border-box; 
+}
+
+/* 駐車場利用状況 (HTML側で定義される編集モード) のスタイル */
+.excel-table .edit-mode-select {
+    position: absolute;
+    top: 100%; 
+    left: 0;
+    z-index: 10; 
+    background: #f8f9fa; 
+    border: 1px solid #ccc; 
+    padding: 5px; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    white-space: nowrap;
+    
+    /* JS側で display: flex を設定するため、flexboxの縦並びスタイルをCSS側で定義 */
+    display: flex; 
+    flex-direction: column;
+    
+    width: auto;
+    max-width: 100%;
+    min-width: 0; 
+    box-sizing: border-box;
+}
+
+/* 備考欄の編集フォームのスタイル (右寄せ展開を強制) */
+.remarks-edit-form {
+    position: absolute;
+    top: 100%;
+    z-index: 10;
+    background: #f8f9fa; 
+    border: 1px solid #ccc;
+    padding: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    
+    /* JS側で display: flex を設定するため、flexboxの縦並びスタイルをCSS側で定義 */
+    display: flex;
+    flex-direction: column; 
+    
+    width: 300px !important; /* 幅を固定して計算を容易にする */
+
+    right: auto !important;
+    left: calc(100% - 300px) !important; /* 親要素の幅からフォームの幅を引いた値に左端を設定 */
+
+    box-sizing: border-box;
+}
 
 
-        /* --- カスタムツールチップのスタイル --- */
-        .custom-tooltip {
-            /* ツールチップの基本設定 */
-            position: absolute;
-            z-index: 1000; 
-            padding: 5px 10px;
-            background-color: #333; 
-            color: #fff; 
-            border: 1px solid #ffcc00; 
-            border-radius: 4px;
-            font-size: 14px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-            /* 初期状態は非表示 */
-            display: none;
-            pointer-events: none; 
-        }
+/* --- フォーム要素の共通スタイル --- */
+.permit-select,
+.situation-select,
+.bus-status-select,
+.parking-status-select { 
+    width: 100%; 
+    box-sizing: border-box; 
+    font-size: 12px; 
+    padding: 2px 0;
+    margin: 0;
+}
 
-        /* 備考欄のtextareaのスタイル */
-        .remarks-textarea {
-            width: 100%;
-            min-height: 50px; 
-            box-sizing: border-box;
-            padding: 3px;
-            font-size: 12px;
-            resize: vertical; 
-            border: 1px solid #ccc; /* 編集が分かりやすいように枠線を追加 */
-            margin-bottom: 5px;
-        }
+/* 更新ボタンのスタイル (元のセレクタ) */
+.update-button { 
+    display: block; 
+    margin-top: 5px; 
+    margin-left: auto; 
+    width: 100%; 
+    box-sizing: border-box;
+    text-align: center;
+}
 
-        /* 🔴 [修正] 備考欄（js-remarks-field）を100%幅に優先表示させる */
-        .excel-table td.js-remarks-field {
-            width: 100% !important; 
-            clear: both !important; 
-        }
-
-        /* 編集可能なセルであることを強調 (既存部分) */
-        .excel-table td.js-visit-situation,
-        .excel-table td.js-parking-status,
-        .excel-table td.js-bus-status {
-            cursor: pointer; 
-            text-align: center !important; 
-        }
-
-        /* 編集可能なセルにマウスが乗ったときの強調 */
-        .excel-table td.js-visit-situation:hover,
-        .excel-table td.js-parking-status:hover,
-        .excel-table td.js-bus-status:hover {
-            background-color: #e6f7ff; 
-            box-shadow: inset 0 0 0 1px #00aaff; 
-        }
-        
-        .situation-text {
-        /* 既存の青い色設定を上書き */
-            color: red !important; /* 💡 文字色を赤に上書き */
-           /* border-bottom: 2px solid red; /* 💡 下線も赤に変更（任意） */
-            display: inline-block;
-            padding-bottom: 2px; 
-            font-weight: bold; 
-        }
-
-        /* 各タブのコンテンツエリアをスクロール可能にする */
-        .tab-content {
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch;
-            width: 100%;
-        }
-
-
-        /* ========================================================== */
-        /* 📱 モバイル表示 (768px未満) の設定 */
-        /* ========================================================== */
-        @media (max-width: 768px) {
-            /* 1. 全体コンテナ、ヘッダー、trの調整 */
-            .excel-container {
-                height: auto; 
-                width: 100%;
-                margin: 0;
-                border: none;
-                box-shadow: none;
-            }
-            .excel-table thead {
-                display: none; 
-            }
-            .excel-table tr {
-                display: block; 
-                border: 1px solid #ccc;
-                margin-bottom: 10px;
-                padding: 5px;
-                /* 🔴 [修正] 背景色を透明にしてPC表示の背景色を継承 */
-                background-color: transparent; 
-            }
-            
-            /* ------------------------------------------- */
-            /* 💡 モバイル時のログアウトボタンの配置調整 (再修正) */
-            /* ------------------------------------------- */
-            .tabs {
-                /* タブのラベルを左寄せにするため、padding-top以外は0にする */
-                padding: 10px 0 0 0; 
-                /* flex-wrap: nowrap; を維持して横並びを強制 */
-                flex-wrap: nowrap;
-                /* align-items: flex-end; を継承し、下揃えを維持 */
-            }
-            
-            .tabs .tab-label {
-                 /* モバイルでは横並びのタブを少し小さくする */
-                 padding: 6px 10px;
-                 font-size: 13px;
-                 margin-bottom: -1px; /* 下揃えを維持 */
-            }
-            
-            .tabs .logout-form {
-                /* 💡 修正: タブと同じ行の右端に寄せる */
-                margin-left: auto;
-                order: initial; /* 順序をリセット */
-                width: auto; 
-                
-                /* 💡 修正: 上下のpaddingを調整してタブのラベルの下端に揃える */
-                padding: 0 10px 4px 5px; 
-                
-                display: flex;
-                align-items: flex-end; /* ボタンをフォームの下端に揃える */
-                
-                border-top: none; /* タブとの区切り線を削除 */
-            }
-            
-            .tabs .logout-button {
-                /* ボタンのサイズを調整 */
-                padding: 6px 12px;
-                font-size: 13px;
-            }
-            /* ------------------------------------------- */
-            
-            /* 2. すべてのセル(td)の基本スタイル - 2列表示をデフォルトとする */
-            .excel-table td {
-                float: left !important; 
-                width: 50% !important; 
-                
-                display: block; 
-                border: 1px solid #eee; 
-                box-sizing: border-box; 
-                padding: 5px; 
-                margin: 0;
-                min-height: 50px !important; 
-                overflow: hidden !important; 
-                font-size: 14px;
-                line-height: 1.4;
-                /* 🔴 [修正] 背景色を透明にしてPC表示と一致させる */
-                background-color: transparent !important; 
-                position: relative; /* 編集オーバーレイのため追記 */
-            }
-
-            /* 🔴 [追加] モバイル時、データが空の行全体は非表示にする */
-            .excel-table tr.no-data-row {
-                display: none !important; /* 通常のデータ行では無いので非表示 */
-            }
-
-            /* 🔴 [追加/修正] データがない場合の代替メッセージ行のスタイル */
-            .excel-table tr.no-data-row-mobile {
-                display: flex !important; /* 💡 Flexboxに変更して高さを確保 */
-                align-items: center; /* 垂直中央揃え */
-                justify-content: center; /* 水平中央揃え */
-                border: 1px solid #ccc;
-                margin-bottom: 10px;
-                height: 120px; /* 💡 高さ固定で絶対的なエリアを確保 */
-                padding: 0;
-                overflow: hidden; /* 高さを確保 */
-            }
-            
-            /* 🔴 [追加/修正] 代替メッセージセルは、モバイルでは100%幅の1行として表示 */
-            .excel-table tr.no-data-row-mobile td {
-                width: 100% !important; /* 全幅に広げる */
-                float: none !important; /* floatを解除 */
-                clear: both !important;
-                text-align: center !important;
-                color: #888;
-                background-color: #f7f7f7 !important;
-                padding: 10px 5px; /* 高さを確保するためのpadding */
-                min-height: auto !important;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            /* 🔴 [本命1] 整理番号（<tr>の最初の子）のみ1列表示にする */
-            .excel-table tr > td:first-child {
-                width: 100% !important; 
-                clear: both !important; 
-            }
-
-            /* 🔴 [修正] 来館予定日時（<tr>の2番目の子）のスタイル */
-            .excel-table tr > td:nth-child(2) {
-                width: 100% !important; 
-                clear: both !important; 
-                /* 💡 中央揃えの追加 */
-                text-align: center !important; 
-                /* 💡 フォントサイズの統一 */
-                font-size: 14px !important; 
-            }
-
-             /* 🔴 [修正] 偶数番目の<td>の後に強制的に改行を入れる (既存設定の調整) */
-            .excel-table tr > td:nth-child(even) {
-                clear: right; 
-            }
-            
-            /* 🔴 [追加] 奇数番目の<td>を左に揃え、次の要素（偶数）が正しく配置されるようにする */
-            .excel-table tr > td:nth-child(odd) {
-                clear: both; /* 常に左端から開始するように強制 */
-                float: left !important;
-                width: 50% !important;
-            }
-            
-            /* 🔴 [追加] 偶数番目の<td>を右に揃えるか、floatを維持する */
-            .excel-table tr > td:nth-child(even) {
-                float: left !important; /* 引き続きfloat leftを適用 */
-                width: 50% !important;
-            }
-            
-            /* 🔴 [例外] 100%幅のセルに対してfloatとwidthを解除する */
-            .excel-table tr > td:first-child, /* 整理番号 */
-            .excel-table tr > td:nth-child(2), /* 来館予定日時 */
-            .excel-table td.js-remarks-field { /* 備考欄 */
-                width: 100% !important; 
-                clear: both !important; 
-                float: none !important; /* 💡 floatを無効化 */
-                text-align: center !important; /* 日時の中央揃えを維持 */
-            }
-            
-            
-            /* 3. ヘッダー情報（ラベル）の表示 */
-            .excel-table td::before {
-                content: attr(data-label); 
-                display: block; 
-                font-weight: bold;
-                color: #0066cc; 
-                border-bottom: 1px solid #eee;
-                margin-bottom: 2px;
-                /* 💡 ラベルは左揃えのままにする */
-                text-align: left !important;
-            }
-            
-            /* 🔴 [例外2] 備考欄（js-remarks-field）は横幅いっぱいに広げる - セレクタを強化 */
-            .excel-table tbody td.js-remarks-field { /* 💡 tbodyを追加して優先度をアップ */
-                width: 100% !important; 
-                clear: both !important; 
-                float: none !important; 
-            }
-            
-            /* フォーム要素の調整 */
-            .excel-table td .permit-select,
-            .excel-table td .situation-select,
-            .excel-table td .remarks-textarea,
-            .excel-table td .vehicle-number-input {
-                box-sizing: border-box !important;
-                max-width: 98%; 
-                height: auto;
-            }
-            
-            /* 4. 2列表示のクリアと整形 */
-            .excel-table tr::after {
-                content: "";
-                display: table;
-                /* 🔴 [修正] display: table を適用し、floatされた子要素の高さを親trに持たせる */
-                clear: both; 
-            }
-            /* 🔴 [追加/修正] 既存の clearfix が効かない場合に備え、tr自体にも高さを確保させる */
-            .excel-table tr {
-                display: block; /* trをブロックレベル要素に戻す (既存) */
-                overflow: hidden; /* 💡 clearfixの代替策：float要素を内包させるために高さを強制する */
-                /* 既存の border, margin-bottom などは保持 */
-            }
-
-            /* tdのafter要素をリセット */
-            .excel-table td::after {
-                content: none !important;
-            }
-
-            /* 🔴 [修正/追加] 編集モードのスタイル調整（モバイルではセル内に収める） */
-            .excel-table .edit-mode,
-            .excel-table .edit-mode-select,
-            .excel-table .remarks-edit-form,
-            .excel-table td .vehicle-number-form { 
-                position: static !important; /* 絶対配置を解除し静的配置に戻す */
-                top: auto !important;
-                left: auto !important;
-                z-index: auto !important;
-                background: transparent !important;
-                border: none !important;
-                padding: 0 !important;
-                box-shadow: none !important;
-                max-width: 100% !important;
-                
-                display: flex; 
-                flex-direction: column;
-                width: 100%;
-                min-width: auto;
-            }
-            
-            /* 🔴 [追加/修正] 車両ナンバーのフォームのレイアウト調整 */
-            .excel-table td .vehicle-number-form {
-                flex-direction: row;       /* 入力欄とボタンを横並びにする */
-                gap: 5px;            
-                align-items: center; 
-                width: 100%;
-            }
-            .excel-table td .vehicle-number-input {
-                flex-grow: 1; /* 入力フィールドが残りのスペースを埋める */
-            }
-
-            /* 🔴 [追加/修正] 車両ナンバー更新ボタンのスタイル */
-            .excel-table td .update-vehicle-button {
-                padding: 2px 5px;
-                font-size: 12px;
-                white-space: nowrap; 
-                cursor: pointer;
-                border: 1px solid #0066cc;
-                background-color: #e6f7ff;
-                border-radius: 3px;
-                width: auto; /* 横並びのため幅を自動調整 */
-                margin-top: 0 !important;
-            }
-            
-            /* モバイル時、selectとボタンの調整 */
-            .excel-table .edit-mode select,
-            .excel-table .edit-mode-select select,
-            .excel-table .remarks-edit-form textarea {
-                width: 100%;
-                box-sizing: border-box;
-                margin-bottom: 5px;
-            }
-
-            .excel-table .edit-mode button,
-            .excel-table .edit-mode-select button,
-            .excel-table .remarks-edit-form button {
-                width: 100%;
-                margin-top: 3px !important;
-                margin-left: 0 !important;
-            }
-
-
-            /* 🔴 [追加] セルが編集可能であることを示すホバー効果 (任意) */
-            .excel-table td.js-vehicle-number-field:hover {
-                background-color: #f0f0f0; 
-                cursor: pointer;
-            }
-        }
+/* 編集モード内のボタンのスタイル (縦並びを維持) */
+.edit-mode button,
+.edit-mode-select button,
+.remarks-edit-form button {
+    width: 100%; 
+    float: none; /* floatを解除 */
+    margin-left: 0; 
+    margin-right: 0;
+    margin-top: 5px; 
+    
+    font-size: 11px;
+    padding: 2px 5px;
+    cursor: pointer;
+    box-sizing: border-box;
+    text-align: center;
+}
 
 /* ========================================================== */
-/* 💡 新規追加: ログインフォームのレスポンシブスタイル */
+/* 車両ナンバーの縦並び強制セクション (PC版) */
+/* ========================================================== */
+
+/* 1. 親<td>のレイアウトモデルをブロックまたはデフォルトに戻し、Flex/Gridを無効化 */
+.excel-table td.js-vehicle-number-field {
+    display: table-cell !important; /* tdのデフォルトに戻す */
+    text-align: left !important; 
+}
+
+/* 車両ナンバーのフォームの絶対配置と見た目 (縦並びを強制) */
+.excel-table td .vehicle-number-form {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    background: #f8f9fa; 
+    border: 1px solid #ccc;
+    padding: 5px;
+    
+    width: auto;
+    max-width: 100%;
+    min-width: 200px;
+    box-sizing: border-box;
+
+    /* JS側で display: block を設定するため、ブロック要素として縦並びを強制 */
+    display: block !important; 
+    white-space: normal; 
+}
+
+/* 車両ナンバー欄の入力フォームのスタイル設定 */
+.excel-table td .vehicle-number-input {
+    width: 100% !important; 
+    display: block !important; 
+    clear: both !important; 
+    
+    box-sizing: border-box; 
+    border: 1px solid #ccc; 
+    padding: 3px;
+    font-size: 14px; 
+    margin: 0 0 5px 0 !important; 
+}
+
+/* 車両ナンバーのボタン（更新・取消）のスタイル */
+.excel-table td .vehicle-number-form button {
+    width: 100% !important; 
+    display: block !important; 
+    float: none !important; 
+    clear: both !important; 
+    
+    margin-top: 5px !important; 
+    box-sizing: border-box;
+}
+/* ========================================================== */
+
+
+/* --- カスタムツールチップのスタイル --- */
+.custom-tooltip {
+    position: absolute;
+    z-index: 1000; 
+    padding: 5px 10px;
+    background-color: #333; 
+    color: #fff; 
+    border: 1px solid #ffcc00; 
+    border-radius: 4px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    display: none;
+    pointer-events: none; 
+}
+
+/* 備考欄のtextareaのスタイル */
+.remarks-textarea {
+    width: 300px !important; 
+    height: 100px !important; 
+    
+    flex-shrink: 0; 
+    
+    box-sizing: border-box;
+    padding: 3px;
+    font-size: 12px;
+    resize: vertical; 
+    border: 1px solid #ccc; 
+    margin-bottom: 5px; 
+}
+
+/* 備考欄（js-remarks-field）を100%幅に優先表示させる (PC版の維持) */
+.excel-table td.js-remarks-field {
+    width: 100% !important; 
+    clear: both !important; 
+}
+
+/* 編集可能なセルであることを強調 (既存部分) */
+.excel-table td.js-visit-situation,
+.excel-table td.js-parking-status,
+.excel-table td.js-bus-status {
+    cursor: pointer; 
+    text-align: center !important; 
+}
+
+/* 編集可能なセルにマウスが乗ったときの強調 */
+.excel-table td.js-visit-situation:hover,
+.excel-table td.js-parking-status:hover,
+.excel-table td.js-bus-status:hover {
+    background-color: #e6f7ff; 
+    box-shadow: inset 0 0 0 1px #00aaff; 
+}
+
+.situation-text {
+    color: red !important; 
+    display: inline-block;
+    padding-bottom: 2px; 
+    font-weight: bold; 
+    white-space: normal; 
+}
+
+/* 各タブのコンテンツエリアをスクロール可能にする */
+.tab-content {
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+
+/* ========================================================== */
+/* 📱 モバイル表示 (768px未満) の設定 - 💡 Flexbox 最終安定版 */
+/* ========================================================== */
+@media (max-width: 768px) {
+    /* 1. 全体コンテナ、ヘッダー、trの調整 */
+    .excel-container {
+        height: auto; 
+        width: 100%;
+        margin: 0;
+        border: none;
+        box-shadow: none;
+    }
+    .excel-table thead {
+        display: none; 
+    }
+    .excel-table tr {
+        display: flex; /* 💡 trをFlexコンテナにする */
+        flex-wrap: wrap; /* 💡 セルが溢れたら折り返す */
+        
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        padding: 5px;
+        background-color: transparent; 
+        overflow: hidden; 
+    }
+    
+    /* ------------------------------------------- */
+    /* モバイル時のログアウトボタンの配置調整 (維持) */
+    /* ------------------------------------------- */
+    .tabs {
+        padding: 10px 0 0 0; 
+        flex-wrap: nowrap;
+        align-items: flex-end;
+    }
+    
+    .tabs .tab-label {
+         padding: 6px 10px;
+         font-size: 13px;
+         margin-bottom: -1px;
+    }
+    
+    .tabs .logout-form {
+        margin-left: auto;
+        order: initial; 
+        width: auto; 
+        padding: 0 10px 4px 5px; 
+        display: flex;
+        align-items: flex-end;
+        border-top: none;
+    }
+    
+    .tabs .logout-button {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+    /* ------------------------------------------- */
+    
+    /* 2. すべてのセル(td)の基本スタイル - Flexアイテムとして制御 */
+    .excel-table td {
+        display: block; /* 内部のbefore/afterを維持するため */
+        flex-grow: 0;
+        flex-shrink: 0;
+        
+        /* 💡 デフォルトは50%幅 */
+        flex-basis: calc(50% - 2px); 
+        margin: 1px; /* セル間に隙間を設ける (合計2px) */
+        
+        border: 1px solid #eee; 
+        box-sizing: border-box; 
+        padding: 5px; 
+        min-height: 50px !important; 
+        overflow: hidden !important; 
+        font-size: 14px;
+        line-height: 1.4;
+        background-color: transparent !important; 
+        position: relative; 
+    }
+    
+    /* 🔴 100%幅にしたいセル（整理番号, 日時, 備考欄） */
+    .excel-table tr > td:first-child,    /* 整理番号 */
+    .excel-table tr > td:nth-child(2),   /* 来館予定日時 */
+    .excel-table td.js-remarks-field {   /* 備考欄 */
+        flex-basis: 100% !important; /* Flexboxで100%幅を確保 */
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    /* 🔴 【最重要修正】駐車証No.と駐車位置のペアの幅を調整 */
+    
+    /* 駐車証No. (横並び開始) */
+    .excel-table tr > td.js-permit-number {
+        /* 💡 35%幅に設定。マージンとボーダーを考慮し、折り返しを確実に防ぐ */
+        flex-basis: 49% !important; 
+        min-width: 50px !important;
+        margin-left: 0; /* 左端に寄せる */
+        margin-right: 1px;
+    }
+    /* 駐車位置 (横並び終了) */
+    .excel-table tr > td.js-permit-location {
+        /* 💡 35%幅に設定 */
+        flex-basis: 49% !important; 
+        min-width: 50px !important;
+        margin-left: 1px;
+        margin-right: auto; /* 💡 右マージンをautoにして、左端に押し付ける */
+    }
+    
+    /* 🔴 セルの表示順序を order で制御し、意図しない回り込みを防ぐ */
+    /* これにより、駐車位置の後、利用状況が必ず次の行の先頭に来るようにする */
+    
+    /* 1, 2行目（100%幅） */
+    .excel-table tr > td:nth-child(1) { order: 1; } /* 整理番号 */
+    .excel-table tr > td:nth-child(2) { order: 2; } /* 来館予定日時 */
+    
+    /* 3行目（駐車証No. & 駐車位置ペア） */
+    .excel-table td.js-permit-number { order: 3; } 
+    .excel-table td.js-permit-location { order: 4; } 
+    
+    /* 4行目以降（50%幅ペア） */
+    .excel-table tr > td:nth-child(5) { order: 5; } /* 利用状況 (50%幅, 左端) */
+    .excel-table tr > td:nth-child(6) { order: 6; } /* 駐車場利用 (50%幅, 右端) */
+    .excel-table tr > td:nth-child(7) { order: 7; } 
+    .excel-table tr > td:nth-child(8) { order: 8; } 
+    .excel-table tr > td:nth-child(9) { order: 9; } 
+    .excel-table tr > td:nth-child(10) { order: 10; } 
+    .excel-table tr > td:nth-child(11) { order: 11; } 
+    .excel-table tr > td:nth-child(12) { order: 12; } 
+    .excel-table tr > td:nth-child(13) { order: 13; } 
+    
+    .excel-table td.js-remarks-field { order: 99; flex-basis: 100% !important; } /* 備考欄は最後に100%幅で表示 */
+    
+    /* 💡 order: 5 のセルを確実に左端に配置するため、左マージンをリセット */
+    .excel-table tr > td:nth-child(5) { 
+        margin-left: 0 !important; /* 利用状況を左端に寄せる */
+    }
+    
+    /* 3. ヘッダー情報（ラベル）の表示 (維持) */
+    .excel-table td::before {
+        content: attr(data-label); 
+        display: block; 
+        font-weight: bold;
+        color: #0066cc; 
+        border-bottom: 1px solid #eee;
+        margin-bottom: 2px;
+        text-align: left !important;
+    }
+    
+    /* 4. Flexboxのためfloatクリア関連はリセット (維持) */
+    .excel-table tr::after {
+        content: none !important; 
+    }
+    
+    .excel-table td::after {
+        content: none !important;
+    }
+    
+    /* 🔴 編集モードのスタイル調整（モバイルではセル内に収める） (維持) */
+    .excel-table .edit-mode,
+    .excel-table .edit-mode-select,
+    .excel-table .remarks-edit-form,
+    .excel-table td .vehicle-number-form { 
+        position: static !important; 
+        display: block; 
+        width: 100%;
+        min-width: auto;
+    }
+    
+    /* (以下、編集フォーム関連のスタイルは変更なし) */
+    .excel-table td .vehicle-number-form {
+        display: block !important; 
+        width: 100%;
+        padding: 0 !important;
+    }
+    
+    .excel-table td .vehicle-number-input {
+        width: 100% !important; 
+        display: block !important; 
+        clear: both !important; 
+        margin-bottom: 5px !important; 
+    }
+
+    .excel-table td .update-vehicle-button,
+    .excel-table td .cancel-vehicle-button {
+        padding: 4px 5px;
+        font-size: 13px;
+        width: 100% !important; 
+        display: block !important; 
+        clear: both !important; 
+        float: none !important;
+        margin-top: 5px !important;
+    }
+    
+    .excel-table .edit-mode select,
+    .excel-table .edit-mode-select select,
+    .excel-table .remarks-edit-form textarea {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 5px;
+    }
+
+    .excel-table .edit-mode button,
+    .excel-table .edit-mode-select button,
+    .excel-table .remarks-edit-form button {
+        width: 100%;
+        margin-top: 3px !important;
+        margin-left: 0 !important;
+    }
+    
+    .excel-table .remarks-edit-form textarea {
+        width: 100% !important; 
+        height: 100px !important; 
+        min-height: 80px !important; 
+        box-sizing: border-box;
+    }
+    
+    /* 🔴 データがない場合の代替メッセージ行のスタイル (維持) */
+    .excel-table tr.no-data-row {
+        display: none !important; 
+    }
+    .excel-table tr.no-data-row-mobile {
+        display: flex !important; 
+        align-items: center; 
+        justify-content: center; 
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        height: 120px; 
+        padding: 0;
+        overflow: hidden; 
+    }
+    .excel-table tr.no-data-row-mobile td {
+        flex-basis: 100% !important; 
+        float: none !important; 
+        clear: both !important;
+        text-align: center !important;
+        color: #888;
+        background-color: #f7f7f7 !important;
+        padding: 10px 5px; 
+        min-height: auto !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+    }
+}
+
+/* ========================================================== */
+/* ログインフォームのレスポンシブスタイル (維持) */
 /* ========================================================== */
 body {
-    /* 画面いっぱいに広げ、フォームを垂直・水平中央に配置 */
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4; /* 背景色を設定（任意） */
+    background-color: #f4f4f4; 
     display: flex;
-    justify-content: center; /* 水平中央寄せ */
-    align-items: center; /* 垂直中央寄せ */
-    min-height: 100vh; /* 画面の高さいっぱいに広げる */
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
 }
 .login-container { 
-    /* PCでの最大幅を設定し、モバイルでは画面幅に合わせる */
-    width: 90%; /* モバイルで画面の90%を使用 */
-    max-width: 400px; /* PCでの最大幅を制限 */
-    
+    width: 90%; 
+    max-width: 400px; 
     margin: auto; 
-    padding: 30px; /* パディングを増やしてゆとりを持たせる */
-    
+    padding: 30px; 
     border: 1px solid #ccc; 
-    border-radius: 8px; /* 角を丸くする */
-    background-color: white; /* フォームの背景色 */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を追加 */
+    border-radius: 8px; 
+    background-color: white; 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
 }
-/* H1タグのスタイルは、このCSSの他のH2などと競合しないためそのまま追加 */
 .login-container h1 {
     text-align: center;
     margin-bottom: 25px;
@@ -737,11 +724,10 @@ label {
     margin-bottom: 5px; 
     font-weight: bold; 
 }
-/* inputのパディングを増やし、フォントサイズを大きくしてタッチしやすく */
 input[type="text"], input[type="password"] { 
     width: 100%; 
-    padding: 10px; /* パディングを増やす */
-    font-size: 16px; /* フォントサイズを大きく */
+    padding: 10px; 
+    font-size: 16px; 
     border: 1px solid #ddd;
     border-radius: 4px;
     box-sizing: border-box; 
