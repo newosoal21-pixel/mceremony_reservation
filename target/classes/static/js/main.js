@@ -17,8 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const isAdmin = userRole === 'ADMIN';
 
     // ------------------------------------------------------------------
-    // --- AJAX関数 (ファイルのどこかに追加) ---
+    // --- AJAX関数 ---
     // ------------------------------------------------------------------
+    /**
+     * サーバーに更新リクエストを送信する汎用関数
+     * @param {string} id - レコードID
+     * @param {string} field - 更新対象のフィールド名 (例: 'carNumber', 'parkingStatus')
+     * @param {string} value - 新しい値
+     * @returns {Promise<any>}
+     */
     function sendUpdateToServer(id, field, value) {
        // リクエストヘッダーを設定
        const headers = {
@@ -28,20 +35,20 @@ document.addEventListener('DOMContentLoaded', () => {
        if (csrfHeader && csrfToken) {
            headers[csrfHeader] = csrfToken;
        }
-
+       
+       // 備考欄の更新は元のコードのロジックに合わせるため、ここでは統一のエンドポイントを使用
        return fetch('/api/parking/update', { 
-       method: 'POST',
-       headers: headers, // ✅ 修正点: CSRFトークンを含むヘッダーを設定
-       body: JSON.stringify({
-           id: id,
-        field: field,
-        value: value
-         })
-       })
+           method: 'POST',
+           headers: headers,
+           body: JSON.stringify({
+               id: id,
+            field: field,
+            value: value
+             })
+           })
             .then(response => {
                 if (!response.ok) {
                     // サーバーエラー（4xx, 5xx）の処理
-                    // 403 Forbidden (CSRFエラー) などのレスポンスをここで処理
                     return response.json().then(err => { 
                         throw new Error(err.message || 'サーバーエラー (' + response.status + '): 権限またはデータエラー'); 
                     }).catch(() => {
@@ -50,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
                 return response.json(); 
-      });
+            });
     }
     // ------------------------------------------------------------------
 
@@ -73,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const textSpan = document.createElement('span');
         textSpan.textContent = originalValue || '-'; 
         textSpan.className = 'permit-number-text'; 
-        // ✅ 修正点: 初期表示の確実性を向上
         textSpan.style.display = 'inline-block'; 
         textSpan.style.visibility = 'visible';
         cell.appendChild(textSpan);
@@ -184,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		          // 成功した場合のみDOMを更新
 		          textSpan.textContent = newText;
 		          cell.setAttribute('data-value', newValue); 
-		          // ✅ 修正点: 表示モードを確実に表示
+		          
 		          textSpan.style.display = 'inline-block'; 
 		          textSpan.style.visibility = 'visible';
 		                
@@ -213,8 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalVal = cell.getAttribute('data-value') || textSpan.textContent;
             selectElement.value = originalVal;
         });
-
-        // セレクトボックスの選択が変更されたら、更新ボタンをクリックする
         
     });
 
@@ -238,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	            return; 
 	        }
             
+            // 編集モードのスタイル調整
             editWrapper.style.position = 'absolute';
             editWrapper.style.top = '100%';
             editWrapper.style.left = '0';
@@ -246,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             editWrapper.style.border = '1px solid #ccc';
             editWrapper.style.padding = '5px';
             editWrapper.style.whiteSpace = 'nowrap'; 
-            // 編集モードを確実に非表示に設定
             editWrapper.style.display = 'none'; 
             editWrapper.style.visibility = 'hidden';
 
@@ -265,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	            }
 
 	            const currentStatusId = cell.getAttribute('data-status-id'); 
-	            selectElement.value = currentStatusId;
+	            selectElement.value = currentStatusId; 
 	        
 				// 表示モードを非表示
 				textSpan.style.display = 'none';
@@ -293,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			          // 成功した場合のみDOMを更新
 			          textSpan.textContent = newTextName;
 			          cell.setAttribute('data-status-id', newValueId); 
-	                  // ✅ 修正点: 表示モードを確実に表示
+	                  
 	                  textSpan.style.display = 'inline-block'; 
                       textSpan.style.visibility = 'visible';
 			                
@@ -319,14 +323,109 @@ document.addEventListener('DOMContentLoaded', () => {
                  const originalStatusId = cell.getAttribute('data-status-id'); 
                  selectElement.value = originalStatusId;
 	        });
-	        
-            // セレクトボックスの選択が変更されたら、更新ボタンをクリックする
-            
-	        
 	    });
 
+		// ------------------------------------------------------------------
+		// --- 3. 車両ナンバー (content1) の処理 (最終修正) ---
+		// ------------------------------------------------------------------
+		const vehicleNumberFields = document.querySelectorAll('#content1 .js-vehicle-number-field');
+
+		vehicleNumberFields.forEach(cell => {
+		    const textSpan = cell.querySelector('.vehicle-number-text');
+		    
+		    // フォーム要素の取得: HTMLに合わせ .vehicle-number-edit-form を使用
+		    const form = cell.querySelector('.vehicle-number-edit-form'); 
+		    
+		    // 安全チェック: 必須要素がない場合はスキップし、次の要素へ
+		    if (!textSpan || !form) {
+		         console.error("車両ナンバーフィールドの必須要素が見つかりません。", cell);
+		         return; 
+		    }
+		    
+		    // フォーム内の要素を取得 (formがnullでないことは確認済み)
+		    const inputField = form.querySelector('.vehicle-number-input');
+		    const updateButton = form.querySelector('.update-vehicle-button');
+		    const cancelButton = form.querySelector('.cancel-vehicle-button'); // HTMLにあるので取得
+
+		    if (!inputField || !updateButton || !cancelButton) {
+		        console.error("車両ナンバーフォーム内の必須ボタンまたは入力欄が見つかりません。", form);
+		        return; 
+		    }
+		    
+		    // フォームを確実に非表示に設定
+		    form.style.display = 'none';
+		    form.style.visibility = 'hidden';
+		    
+		    // <td>クリック (編集モードへ切り替え)
+		    cell.addEventListener('click', function(e) {
+		         e.stopPropagation();
+		        
+		         if (!isAdmin) { return; } 
+
+		         if (form.style.display !== 'none' || form.contains(e.target)) {
+		             return;
+		         }
+		        
+		         // 現在の表示値を入力フィールドにセット
+		         inputField.value = textSpan.textContent.trim();
+		        
+		         textSpan.style.display = 'none';
+		         textSpan.style.visibility = 'hidden';
+		        
+		         form.style.display = 'flex'; 
+		         form.style.visibility = 'visible';
+		         inputField.focus(); 
+		    });
+
+		    // 更新ボタンのイベントリスナー (AJAX処理)
+		    updateButton.addEventListener('click', function(e) {
+		        e.preventDefault(); 
+		        e.stopPropagation();
+		        
+		        const newNumber = inputField.value;
+		        const recordId = cell.closest('tr').getAttribute('data-parking-id');
+		        
+		        sendUpdateToServer(recordId, 'carNumber', newNumber)
+		             .then(() => {
+		                // 成功
+		                textSpan.textContent = newNumber;
+		                textSpan.setAttribute('data-original-value', newNumber); 
+		                
+		                // 表示モードを再表示
+		                textSpan.style.display = 'inline-block';
+		                textSpan.style.visibility = 'visible';
+		                // 編集モードを非表示
+		                form.style.display = 'none';
+		                form.style.visibility = 'hidden';
+		                alert('車両ナンバーを更新しました！');
+		             })
+		             .catch(error => {
+		                 console.error('車両ナンバーの更新エラー:', error);
+		                 alert('更新に失敗しました。詳細はコンソールを確認してください。');
+		                 
+		                 // 失敗した場合、元の値に戻す（今回は textSpan のtextContentを元の値とする）
+		                 inputField.value = textSpan.textContent.trim();
+		             });
+		    });
+
+		    // 取消ボタンのイベントリスナー
+		    cancelButton.addEventListener('click', function(e) {
+		        e.stopPropagation(); 
+		        
+		        // 入力値を編集前の値に戻す
+		        inputField.value = textSpan.textContent.trim();
+		        
+		        // 編集モードを非表示に戻す
+		        form.style.display = 'none';
+		        form.style.visibility = 'hidden';
+		        // 表示モードに戻す
+		        textSpan.style.display = 'inline-block';
+		        textSpan.style.visibility = 'visible';
+		    });
+		});
+
     // ------------------------------------------------------------------
-    // --- 3. 来館状況 (content2) の処理 ---
+    // --- 4. 来館状況 (content2) の処理 ---
     // ------------------------------------------------------------------
     const situationCells = document.querySelectorAll('#content2 .js-visit-situation');
 
@@ -456,7 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ------------------------------------------------------------------
-    // --- 4. 送迎バス入出庫状況 (content3) の処理 ---
+    // --- 5. 送迎バス入出庫状況 (content3) の処理 ---
     // ------------------------------------------------------------------
     const busStatusCells = document.querySelectorAll('#content3 .js-bus-status');
 
@@ -579,88 +678,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // ------------------------------------------------------------------
-    // --- 5. 車両ナンバー (content1) の処理 ---
-    // ------------------------------------------------------------------
-    const vehicleNumberFields = document.querySelectorAll('#content1 .js-vehicle-number-field');
-
-    vehicleNumberFields.forEach(cell => {
-        const textSpan = cell.querySelector('.vehicle-number-text');
-        const form = cell.querySelector('.vehicle-number-form');
-        
-        if (!textSpan || !form) {
-             console.error("車両ナンバーフィールドの要素が見つかりません。", cell);
-             return;
-        }
-        
-        // フォームを確実に非表示に設定
-        form.style.display = 'none';
-        form.style.visibility = 'hidden';
-        
-        // 初期表示を確実にする
-        textSpan.style.display = 'inline-block';
-        textSpan.style.visibility = 'visible';
-
-        // <td>クリック (編集モードへ切り替え)
-        cell.addEventListener('click', function(e) {
-             e.stopPropagation();
-            
-             if (!isAdmin) { return; } // 管理者制限
-
-             if (form.style.display !== 'none' || form.contains(e.target)) {
-                 return;
-             }
-            
-             textSpan.style.display = 'none';
-             textSpan.style.visibility = 'hidden';
-            
-             form.style.display = 'flex';
-             form.style.visibility = 'visible';
-             form.querySelector('.vehicle-number-input').focus(); 
-        });
-
-        // フォーム内の更新ボタンのイベントリスナー
-        const updateButton = form.querySelector('.update-vehicle-button');
-        updateButton.addEventListener('click', function(e) {
-            e.preventDefault(); 
-            e.stopPropagation();
-            
-            const inputField = form.querySelector('.vehicle-number-input');
-            const newNumber = inputField.value;
-            const recordId = form.querySelector('input[name="record_id"]').value;
-            
-            // サーバー送信処理（例: sendUpdateToServer関数を再利用）
-            // 車両ナンバーはString型として送信
-            sendUpdateToServer(recordId, 'carNumber', newNumber)
-                 .then(() => {
-                    textSpan.textContent = newNumber;
-                    // 表示モードを再表示
-                    textSpan.style.display = 'inline-block';
-                    textSpan.style.visibility = 'visible';
-                    // 編集モードを非表示
-                    form.style.display = 'none';
-                    form.style.visibility = 'hidden';
-                    alert('車両ナンバーを更新しました！');
-                 })
-                 .catch(error => {
-                     console.error('車両ナンバーの更新エラー:', error);
-                     alert('更新に失敗しました。詳細はコンソールを確認してください。');
-                 });
-        });
-        
-        // 編集モード外をクリックした際の挙動 (document全体にイベントを追加)
-        document.addEventListener('click', (e) => {
-            if (form.style.display !== 'none' && !cell.contains(e.target)) {
-                // 編集モードを非表示に戻す
-                form.style.display = 'none';
-                form.style.visibility = 'hidden';
-                // 表示モードに戻す
-                textSpan.style.display = 'inline-block';
-                textSpan.style.visibility = 'visible';
-            }
-        });
-    });
-
-    // ------------------------------------------------------------------
     // --- 6. 備考欄 (content1, content2, content3) の処理 ---
     // ------------------------------------------------------------------
     const remarksFields = document.querySelectorAll('.js-remarks-field');
@@ -680,10 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editForm.style.display = 'none';
         editForm.style.visibility = 'hidden';
         
-        // 初期表示を確実にする
-        textSpan.style.display = 'inline-block';
-        textSpan.style.visibility = 'visible';
-
         // <td>クリック (編集モードへ切り替え)
         cell.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -699,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
             textSpan.style.visibility = 'hidden';
             
             // 編集モードを表示
-            editForm.style.display = 'flex'; 
+            editForm.style.display = 'flex'; // フォーム内の要素に合わせてflexに変更
             editForm.style.visibility = 'visible';
             textarea.focus(); 
         });
@@ -717,17 +730,20 @@ document.addEventListener('DOMContentLoaded', () => {
             let apiEndpoint;
             
             if (tableType === 'content1') {
+                // 駐車場リストは /api/parking/update を使用
                 apiEndpoint = '/api/parking/update';
             } else if (tableType === 'content2') {
-                apiEndpoint = '/api/visit/update';
+                // 来館者リスト（ダミーAPI）
+                apiEndpoint = '/api/visit/update'; 
             } else if (tableType === 'content3') {
-                apiEndpoint = '/api/bus/update';
+                // 送迎バスリスト（ダミーAPI）
+                apiEndpoint = '/api/bus/update'; 
             } else {
                 console.error("テーブルタイプを特定できません。");
                 return;
             }
             
-            // サーバー送信処理（fetchを直接使用、CSRFヘッダーが必要）
+            // サーバー送信処理（fetchを直接使用, CSRFヘッダーが必要）
             const headers = { 'Content-Type': 'application/json' };
             if (csrfHeader && csrfToken) {
                 headers[csrfHeader] = csrfToken;
@@ -744,7 +760,11 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('サーバーエラーが発生しました');
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'サーバーエラーが発生しました');
+                    }).catch(() => {
+                        throw new Error('サーバーエラーが発生しました');
+                    });
                 }
                 return response.json(); 
             })
@@ -762,6 +782,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => {
                 console.error('備考欄の更新エラー:', error);
                 alert('更新に失敗しました。詳細はコンソールを確認してください。');
+                // 編集前の値に戻す
+                textarea.value = textSpan.textContent; 
             });
         });
         
@@ -787,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             document.querySelectorAll('.edit-mode, .edit-mode-select, .vehicle-number-form, .remarks-edit-form').forEach(wrapper => {
-                if (wrapper.style.display !== 'none' && wrapper.style.display !== '') {
+                if (wrapper.style.display !== 'none' && wrapper.style.visibility === 'visible') {
                     const cell = wrapper.closest('td');
                     if (cell) {
                         const textSpan = cell.querySelector('.permit-number-text') || 
@@ -795,6 +817,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                          cell.querySelector('.situation-text') ||
                                          cell.querySelector('.vehicle-number-text') ||
                                          cell.querySelector('.remarks-text');
+                        
+                        // 編集前の値に戻す処理 (車両ナンバーと備考欄)
+                        if (wrapper.classList.contains('vehicle-number-form')) {
+                            const input = wrapper.querySelector('.vehicle-number-input');
+                            if (textSpan) input.value = textSpan.textContent;
+                        } else if (wrapper.classList.contains('remarks-edit-form')) {
+                            const textarea = wrapper.querySelector('.remarks-textarea');
+                            if (textSpan) textarea.value = textSpan.textContent;
+                        }
                         
                         if (textSpan) {
                             textSpan.style.display = 'inline-block';

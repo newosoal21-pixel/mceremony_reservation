@@ -210,10 +210,10 @@ public class Parking {
         return updateTime;
     }
 
-    // updateTimeはDBで自動更新されるため、setterは定義しないか、あっても外部からは使用しない
-    // public void setUpdateTime(LocalDateTime updateTime) {
-//         this.updateTime = updateTime;
-    // }
+    // 💡 setUpdateTime メソッドを有効化
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
 
     public String getRemarksColumn() {
         return remarksColumn;

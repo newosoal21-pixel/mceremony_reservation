@@ -1,42 +1,50 @@
 package com.example.demo.controller;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional; // 💡 追加: トランザクション管理用
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.model.Parking;
+import com.example.demo.model.ParkingStatus;
 import com.example.demo.repository.ParkingRepository;
+import com.example.demo.repository.ParkingStatusRepository;
 
-@RestController // REST APIのコントローラーとして定義
-@RequestMapping("/api/parking") // JavaScriptのfetch先と合わせる
+@RestController
+@RequestMapping("/api/parking")
 public class ParkingApiController {
 
     private final ParkingRepository parkingRepository;
+    private final ParkingStatusRepository parkingStatusRepository;
 
     @Autowired
-    public ParkingApiController(ParkingRepository parkingRepository) {
+    public ParkingApiController(ParkingRepository parkingRepository,
+                                ParkingStatusRepository parkingStatusRepository) {
         this.parkingRepository = parkingRepository;
+        this.parkingStatusRepository = parkingStatusRepository;
     }
 
     /**
-     * 駐車証No.または駐車位置を更新するAPIエンドポイント
-     * @param payload {id: '1', field: 'parkingPermit'/'parkingPosition', value: '15' または ''}
+     * 駐車証No.、駐車位置、車両ナンバー、または利用状況を更新するAPIエンドポイント
+     * @param payload {id: '1', field: 'parkingPermit'/'parkingPosition'/'carNumber'/'parkingStatus', value: '15' or '2'}
      */
     @PostMapping("/update")
+    @Transactional // 💡 トランザクションを保証
     public ResponseEntity<Map<String, String>> updateParkingField(@RequestBody Map<String, String> payload) {
         
     	System.out.println("API受信データ - ID: " + payload.get("id"));
         System.out.println("API受信データ - Field: " + payload.get("field"));
         System.out.println("API受信データ - Value: " + payload.get("value"));
     	
-    	
-        // 1. リクエストボディからデータ取得
         String idStr = payload.get("id");
         String field = payload.get("field");
         String valueStr = payload.get("value"); 
@@ -46,10 +54,7 @@ public class ParkingApiController {
         }
         
         try {
-            // IDはInteger型として処理
             Integer id = Integer.parseInt(idStr);
-            
-            // 2. IDに基づいてエンティティを検索
             Optional<Parking> optionalParking = parkingRepository.findById(id);
 
             if (optionalParking.isEmpty()) {
@@ -57,37 +62,53 @@ public class ParkingApiController {
             }
 
             Parking parking = optionalParking.get();
-            
-            // 3. フィールド名に応じて対応するプロパティを更新
-            
-            // 値が空文字またはnullであるかチェック
             boolean isValueBlank = (valueStr == null || valueStr.trim().isEmpty());
             
-            // データベースのString型フィールドに設定する値
-            // JavaScriptから空文字が送られてきた場合、それをnullとして扱う
-            String valueToSet = isValueBlank ? null : valueStr.trim();
-            
             if ("parkingPermit".equals(field)) {
-                // 駐車証No.を更新
-                // ✅ 修正点: Integerに変換せず、String型のvalueToSetを設定
+                // 駐車証No. (String型) を更新
+                String valueToSet = isValueBlank ? null : valueStr.trim();
                 parking.setParkingPermit(valueToSet);
             } else if ("parkingPosition".equals(field)) {
-                // 駐車位置を更新
-                // ✅ 修正点: Integerに変換せず、String型のvalueToSetを設定
+                // 駐車位置 (String型) を更新
+                String valueToSet = isValueBlank ? null : valueStr.trim();
                 parking.setParkingPosition(valueToSet);
+            } else if ("carNumber".equals(field)) { // 💡 追加: 車両ナンバーの更新
+                if (isValueBlank) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "車両ナンバーは必須です。"));
+                }
+                parking.setCarNumber(valueStr.trim());
+            } else if ("parkingStatus".equals(field)) { 
+                
+                if (isValueBlank) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "利用状況は必須です。"));
+                }
+                
+                Integer newStatusId = Integer.parseInt(valueStr); 
+                Optional<ParkingStatus> optionalStatus = parkingStatusRepository.findById(newStatusId);
+                
+                if (optionalStatus.isEmpty()) {
+                    throw new EntityNotFoundException("ParkingStatus ID " + newStatusId + " が見つかりません");
+                }
+                
+                ParkingStatus newStatus = optionalStatus.get();
+                parking.setParkingStatus(newStatus);
+                
             } else {
-                // 他のフィールド処理（もしあれば）...
                 return ResponseEntity.badRequest().body(Map.of("message", "無効なフィールド名です。"));
             }
 
-            // 4. データベースに保存（更新）
+            // 共通の更新日時をセット
+            parking.setUpdateTime(LocalDateTime.now());
+            
+            // データベースに保存（更新）
             parkingRepository.save(parking);
             
             return ResponseEntity.ok(Map.of("status", "success", "message", "更新が完了しました。"));
             
         } catch (NumberFormatException e) {
-            // IDのInteger変換で失敗した場合のみここに来る（更新値はString型になったため）
-            return ResponseEntity.badRequest().body(Map.of("message", "IDの形式が不正です。"));
+            return ResponseEntity.badRequest().body(Map.of("message", "IDまたは更新値の形式が不正です。"));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             System.err.println("DB更新エラー: " + e.getMessage());
             e.printStackTrace(); 

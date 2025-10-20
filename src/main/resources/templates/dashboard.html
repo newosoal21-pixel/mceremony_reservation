@@ -69,12 +69,15 @@
 			                            <td data-label="用件と続柄" class="group-1-col" th:text="${parking.errandsRelationship}"></td>
 			                            
 			                            <td data-label="車両ナンバー" class="js-vehicle-number-field group-1-col" th:data-record-id="${parking.id}">
-			                                <span class="vehicle-number-text" th:text="${parking.carNumber}"></span>
+			                                <span class="vehicle-number-text" 
+			                                      th:text="${parking.carNumber}"
+			                                      th:data-original-value="${parking.carNumber}"></span>
 
-			                                <form action="/api/update-parking-number" method="POST" class="vehicle-number-form" style="display: none;">
-			                                    <input type="hidden" name="record_id" th:value="${parking.id}">
-			                                    <input type="text" th:value="${parking.carNumber}" name="vehicle_number" class="vehicle-number-input">
-			                                    <button type="submit" class="update-vehicle-button">更新</button> 
+			                                <form class="vehicle-number-edit-form" style="display: none; visibility: hidden;">
+			                                    <input type="hidden" name="record_id" th:value="${parking.id}" class="js-record-id">
+			                                    <input type="text" th:value="${parking.carNumber}" class="vehicle-number-input js-input-value">
+			                                    <button type="button" class="update-vehicle-button js-update-vehicle-button">更新</button> 
+			                                    <button type="button" class="cancel-vehicle-button js-cancel-vehicle-button">取消</button>
 			                                </form>
 			                            </td>
 			                            
@@ -94,11 +97,17 @@
 			                            
 										<td data-label="利用状況" 
 										    class="js-parking-status group-2-col"
-										    th:attr="data-status-id=${parking.parkingStatus.statusId}"> <span class="view-mode-text" th:text="${parking.parkingStatus.statusName}"></span> <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+										    th:attr="data-status-id=${parking.parkingStatus.statusId}">
+										    
+										    <span class="view-mode-text status-red-bold" 
+											          th:text="${parking.parkingStatus.statusName}"></span>
+										    
+										    <div class="edit-mode-select" style="display: none; white-space: nowrap;">
 										        
 										        <select class="form-select form-select-sm situation-select">
 										            <option th:each="status : ${parkingStatuses}" 
-										                    th:value="${status.statusId}"  th:text="${status.statusName}"
+										                    th:value="${status.statusId}"  
+										                    th:text="${status.statusName}"
 										                    th:selected="${status.statusId == parking.parkingStatus.statusId}">
 										            </option>
 										        </select>
