@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Excel風タブレイアウト（折り返し対応版）</title>
+	    
+	<link rel="stylesheet" 
+	          th:href="@{/css/style.css}" 
+	          href="/css/style.css">
+
+</head>
+<body>
+	
+	<div id="custom-tooltip" class="custom-tooltip"></div>
+	<div class="excel-container">
+	    
+	    <input type="radio" name="tabs" id="tab1" checked>
+	    <input type="radio" name="tabs" id="tab2">
+	    <input type="radio" name="tabs" id="tab3">
+
+	    <div class="tabs">
+	        <label for="tab1" class="tab-label">駐車場予約リスト</label>
+	        <label for="tab2" class="tab-label">来館者予約リスト</label>
+	        <label for="tab3" class="tab-label">送迎バス運行リスト</label>
+	        
+	        <div class="tab-line"></div>
+	    </div>
+	    
+	    <div class="tab-contents">
+			<section id="content1" class="content">
+			            <h2>🚙 1駐車場予約リスト</h2>
+			            <p>挙式施行日の駐車場利用予約情報の閲覧、更新ができます。</p>
+			            
+			            <div class="table-wrapper">
+			                <table class="excel-table">
+			                    <thead>
+			                        <tr>
+			                            <th>駐車場予約リストID</th>
+			                            <th>来館予定日時</th>
+			                            <th>用件と続柄</th>
+			                            <th>車両ナンバー</th>
+			                            <th>来館者氏名</th>
+			                            <th>参列家名</th>
+			                            <th>担当</th>
+			                            <th>出庫時刻</th>
+			                            <th>駐車証No.</th>
+			                            <th>駐車位置</th>
+			                            <th>利用状況</th>
+			                            <th>更新日時</th>
+			                            <th>備考欄</th>
+			                        </tr>
+			                    </thead>
+			                    <tbody>
+			                        <tr th:each="parking : ${parkings}" th:attr="data-parking-id=${parking.id}">
+			                            <td data-label="駐車場予約リスト" class="group-1-col" th:text="${parking.id}"></td>
+			                            
+			                            <td data-label="来館予定日時" class="group-1-col" 
+			                                th:text="${parking.visitReservationTime != null ? #temporals.format(parking.visitReservationTime, 'yyyy/MM/dd HH:mm') : '-'}">
+			                            </td>
+			                            
+			                            <td data-label="用件と続柄" class="group-1-col" th:text="${parking.errandsRelationship}"></td>
+			                            
+			                            <td data-label="車両ナンバー" class="js-vehicle-number-field group-1-col" th:data-record-id="${parking.id}">
+			                                <span class="vehicle-number-text" th:text="${parking.carNumber}"></span>
+
+			                                <form action="/api/update-parking-number" method="POST" class="vehicle-number-form" style="display: none;">
+			                                    <input type="hidden" name="record_id" th:value="${parking.id}">
+			                                    <input type="text" th:value="${parking.carNumber}" name="vehicle_number" class="vehicle-number-input">
+			                                    <button type="submit" class="update-vehicle-button">更新</button> 
+			                                </form>
+			                            </td>
+			                            
+			                            <td data-label="来館者氏名" class="group-1-col" th:text="${parking.visitor.visitorName}"></td>
+			                            
+			                            <td data-label="参列家名" class="group-1-col" th:text="${parking.familyNames}"></td>
+			                            
+			                            <td data-label="担当" class="group-1-col" th:text="${parking.managerName}"></td>
+			                            
+			                            <td data-label="出庫時刻" class="group-1-col" 
+			                                th:text="${parking.departureTime != null ? #temporals.format(parking.departureTime, 'yyyy/MM/dd HH:mm') : ''}">
+			                            </td>
+			                            
+			                            <td data-label="駐車証No." class="js-permit-number group-2-col" th:text="${parking.parkingPermit}" th:data-value="${parking.parkingPermit}"></td>
+			                            
+			                            <td data-label="駐車位置" class="js-permit-location group-2-col" th:text="${parking.parkingPosition}" th:data-value="${parking.parkingPosition}"></td>
+			                            
+										<td data-label="利用状況" 
+										    class="js-parking-status group-2-col"
+										    th:attr="data-status-id=${parking.parkingStatus.statusId}"> <span class="view-mode-text" th:text="${parking.parkingStatus.statusName}"></span> <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+										        
+										        <select class="form-select form-select-sm situation-select">
+										            <option th:each="status : ${parkingStatuses}" 
+										                    th:value="${status.statusId}"  th:text="${status.statusName}"
+										                    th:selected="${status.statusId == parking.parkingStatus.statusId}">
+										            </option>
+										        </select>
+										        
+										        <button class="btn btn-primary btn-sm js-update-button" 
+										                data-field-name="parkingStatus" 
+										                style="margin-left: 5px;">更新</button> 
+										                
+										        <button class="btn btn-secondary btn-sm js-cancel-button">取消</button>
+										    </div>
+										</td>
+			                            
+			                            <td data-label="更新日時" class="group-2-col" 
+			                                th:text="${#temporals.format(parking.updateTime, 'yyyy/MM/dd HH:mm')}">
+			                            </td>
+			                            
+			                            <td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${parking.id}">
+			                                <span class="remarks-text" th:text="${parking.remarksColumn}"></span>
+			                                
+			                                <div class="remarks-edit-form" style="display: none;">
+			                                    <textarea class="remarks-textarea" th:data-original-value="${parking.remarksColumn}" th:text="${parking.remarksColumn}"></textarea>
+			                                    <button type="submit" class="update-remarks-button">更新</button>
+			                                </div>
+			                            </td>
+			                        </tr>
+			                        <tr th:if="${#lists.isEmpty(parkings)}" class="no-data-row">
+			                            <td colspan="13">登録されている駐車場予約データはありません (PC)</td>
+			                        </tr>
+			                        <tr th:if="${#lists.isEmpty(parkings)}" class="no-data-row-mobile">
+			                            <td colspan="13" data-label="">登録されている駐車場予約データはありません</td> 
+			                        </tr>
+			                    </tbody>
+			                </table>
+			            </div>
+			        </section>
+					<section id="content2" class="content">
+					            <h2>🏠 2来館者予約リスト</h2>
+					            <p>挙式施行日の来館者予定情報の閲覧、更新ができます。</p>
+					            
+					            <div class="table-wrapper">
+					                <table class="excel-table">
+					                    <thead>
+					                        <tr>
+					                            <th>来館者予約リストID</th>
+					                            <th>来館予定日時</th>
+					                            <th>用件</th>
+					                            <th>来館者氏名</th>
+					                            <th>参列家名</th>
+					                            <th>担当</th>
+					                            <th>対応完了時刻</th>
+					                            <th>来館状況</th>
+					                            <th>更新日時</th>
+					                            <th>備考欄</th>
+					                        </tr>
+					                    </thead>
+					                    <tbody>
+					                        <tr th:each="visit : ${visits}">
+					                            <td data-label="来館者予約リスト" class="group-1-col" th:text="${visit.id}"></td>
+					                            <td data-label="来館予定日時" class="group-1-col" th:text="${visit.visitReservationTime != null ? #temporals.format(visit.visitReservationTime, 'yyyy/MM/dd HH:mm') : '-'}"></td>
+					                            <td data-label="用件" class="group-1-col" th:text="${visit.errandsRelationship}"></td>
+					                            <td data-label="来館者氏名" class="group-1-col" th:text="${visit.visitorName}"></td>
+					                            <td data-label="参列家名" class="group-1-col" th:text="${visit.familyNames}"></td>
+					                            <td data-label="担当" class="group-1-col" th:text="${visit.managerName}"></td>
+					                            <td data-label="対応完了時刻" class="group-2-col" th:text="${visit.compilationCmpTime != null ? #temporals.format(visit.compilationCmpTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+					                            <td data-label="来館状況" class="js-visit-situation group-2-col" th:text="${visit.visitSituation.situationName}" th:data-value="${visit.visitSituation.situationName}"></td>
+					                            <td data-label="更新日時" class="group-2-col" th:text="${visit.updateTime != null ? #temporals.format(visit.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+					                            <td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${visit.id}" th:text="${visit.remarksColumn}"></td>
+					                        </tr>
+					                    </tbody>
+					                </table>
+					            </div>
+					        </section>
+							<section id="content3" class="content">
+							            <h2>🚌 3送迎バス運行リスト</h2>
+							            <p>挙式施行日の送迎バス運行情報の閲覧、更新ができます。</p>
+							            
+							            <div class="table-wrapper">
+							                <table class="excel-table">
+							                    <thead>
+							                        <tr>
+							                            <th>送迎バス運行リストID</th>
+							                            <th>参列者到着予定日時</th>
+							                            <th>運行バス会社名（定員）</th>
+							                            <th>発着終着場所</th>
+							                            <th>下車済バス出庫時刻</th>
+							                            <th>参列者出発予定時刻</th>
+							                            <th>乗車済バス出庫時刻</th>
+							                            <th>手配両家名</th>
+							                            <th>担当</th>
+							                            <th>乗車数</th>
+							                            <th>入出庫状況</th>
+							                            <th>更新日時</th>
+							                            <th>備考欄</th>
+							                        </tr>
+							                    </thead>
+							                    <tbody>
+							                        <tr th:each="bus : ${busReservations}">
+							                            <td data-label="送迎バス運行リスト" class="group-1-col" th:text="${bus.id}"></td>
+							                            <td data-label="参列者到着予定日時" class="group-1-col" th:text="${bus.visitReservationTime != null ? #temporals.format(bus.visitReservationTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+							                            <td data-label="運行バス会社名（定員）" class="group-1-col" th:text="${bus.busName}"></td>
+							                            <td data-label="発着終着場所" class="group-1-col" th:text="${bus.busDestination}"></td>
+							                            <td data-label="下車済バス出庫時刻" class="group-1-col" th:text="${bus.emptybusDepTime != null ? #temporals.format(bus.emptybusDepTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+							                            <td data-label="参列者出発予定時刻" class="group-2-col" th:text="${bus.scheduledDepTime != null ? #temporals.format(bus.scheduledDepTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+							                            <td data-label="乗車済バス出庫時刻" class="group-2-col" th:text="${bus.departureTime != null ? #temporals.format(bus.departureTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+							                            <td data-label="手配両家名" class="group-2-col" th:text="${bus.familyNames}"></td>
+							                            <td data-label="担当" class="group-2-col" th:text="${bus.managerName}"></td>
+							                            <td data-label="乗車数" class="group-2-col" th:text="${bus.passengers} + '名'"></td>
+							                            <td data-label="入出庫状況" class="js-bus-status group-2-col" th:text="${bus.busSituation.name}" th:data-value="${bus.busSituation.name}"></td>
+							                            <td data-label="更新日時" class="group-2-col" th:text="${bus.updateTime != null ? #temporals.format(bus.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+							                            <td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${bus.id}" th:text="${bus.remarksColumn}"></td>
+							                        </tr>
+							                    </tbody>
+							                </table>
+							            </div>
+							        </section>
+		</div>
+	</div>
+	<script th:src="@{/js/main.js}" src="/js/main.js"></script>
+</body>
+</html>

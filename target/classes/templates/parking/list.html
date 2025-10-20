@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>駐車場予約リスト</title>
+    </head>
+<body>
+    <h1>駐車場予約リスト</h1>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>駐車場予約リストID</th>
+                <th>来館予定日時</th>
+                <th>用件と続柄</th>
+                <th>車両ナンバー</th>
+                <th>来館者氏名</th>
+                <th>参列家名</th>
+                <th>担当</th>
+                <th>出庫時刻</th>
+                <th>駐車証No.</th>
+                <th>駐車位置</th>
+                <th>利用状況</th>
+                <th>更新日時</th>
+                <th>備考欄</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="parking : ${parkings}">
+                
+                <td data-label="駐車場予約リスト" class="group-1-col" th:text="${parking.id}">1</td>
+                
+                <td data-label="来館予定日時" class="group-1-col" 
+                    th:text="${parking.visitReservationTime != null ? #temporals.format(parking.visitReservationTime, 'yyyy/MM/dd HH:mm') : '-'}">
+                    2025/10/07 10:00
+                </td>
+                
+                <td data-label="用件と続柄" class="group-1-col" th:text="${parking.errandsRelationship}">挙式参列(親族)</td>
+                
+                <td data-label="車両ナンバー" class="js-vehicle-number-field group-1-col" th:data-record-id="${parking.id}">
+                    <span class="vehicle-number-text" th:text="${parking.carNumber}">わ-5070</span>
+
+                    <form action="/api/update-parking-number" method="POST" class="vehicle-number-form" style="display: none;">
+                        <input type="hidden" name="record_id" th:value="${parking.id}">
+                        <input type="text" th:value="${parking.carNumber}" name="vehicle_number" class="vehicle-number-input">
+                        <button type="submit" class="update-vehicle-button">更新</button> 
+                    </form>
+                </td>
+                
+                <td data-label="来館者氏名" class="group-1-col" th:text="${parking.visitor.visitorName}">ほにゃふにお</td>
+                
+                <td data-label="参列家名" class="group-1-col" th:text="${parking.familyNames}">森</td>
+                
+                <td data-label="担当" class="group-1-col" th:text="${parking.managerName}">緒方</td>
+                
+                <td data-label="出庫時刻" class="group-1-col" 
+                    th:text="${parking.departureTime != null ? #temporals.format(parking.departureTime, 'yyyy/MM/dd HH:mm') : '未定'}">
+                    2025/10/7 10:00
+                </td>
+                
+                <td data-label="駐車証No." class="js-permit-number group-2-col" th:text="${parking.parkingPermit}"></td>
+                
+                <td data-label="駐車位置" class="js-permit-location group-2-col" th:text="${parking.parkingPosition}"></td>
+                
+                <td data-label="利用状況" class="js-parking-status group-2-col" th:text="${parking.parkingStatus.name}">キャンセル</td>
+                
+                <td data-label="更新日時" class="group-2-col" 
+                    th:text="${#temporals.format(parking.updateTime, 'yyyy/MM/dd HH:mm')}">
+                    2025/10/07 9:30
+                </td>
+                
+                <td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${parking.id}" th:text="${parking.remarksColumn}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p th:if="${#lists.isEmpty(parkings)}">
+        現在、駐車場予約はありません。
+    </p>
+</body>
+</html>

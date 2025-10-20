@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>従業員一覧</title>
+    <style>
+        table { border-collapse: collapse; width: 80%; margin: 20px auto; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>従業員一覧</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ユーザー名</th>
+                <th>部署名</th>
+                <th>管理者</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="employee : ${employees}">
+                <td th:text="${employee.id}">101</td>
+                <td th:text="${employee.userName}">tanaka_s</td>
+                <td th:text="${employee.department.name}">総務部</td>
+                <td th:text="${employee.isAdmin} ? 'はい' : 'いいえ'">はい</td>
+                <td>
+                    <a th:href="@{/employees/{id}(id=${employee.id})}">詳細/編集</a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <a href="/employees/new">新規従業員登録</a>
+</body>
+</html>

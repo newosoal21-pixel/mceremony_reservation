@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${employee.id} ? '従業員編集' : '従業員登録'">従業員編集</title>
+    <style>
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"], select { width: 300px; padding: 8px; border: 1px solid #ccc; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1 th:text="${employee.id} ? '従業員情報編集 (ID: ' + ${employee.id} + ')' : '新規従業員登録'">従業員情報編集</h1>
+
+    <form th:action="@{/employees/{id}(id=${employee.id})}" th:object="${employee}" method="post">
+        <input type="hidden" name="_method" value="put" th:if="${employee.id}" />
+
+        <div class="form-group">
+            <label for="userName">ユーザー名:</label>
+            <input type="text" id="userName" th:field="*{userName}" required th:attr="readonly=${employee.id}" />
+            <span th:if="${employee.id}">※編集不可</span>
+        </div>
+
+        <div class="form-group">
+            <label for="passwordHash">新しいパスワード (ハッシュ):</label>
+            <input type="password" id="passwordHash" name="passwordHash" />
+            <p th:if="${employee.id}">※更新する場合のみ入力してください</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="department">部署:</label>
+            <select id="department" th:field="*{department.id}" required>
+                <option th:each="dept : ${departments}" 
+                        th:value="${dept.id}" 
+                        th:text="${dept.name}">総務部</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>管理者権限:</label>
+            <input type="checkbox" th:field="*{isAdmin}" />
+        </div>
+        
+        <div class="form-group">
+            <label>削除フラグ:</label>
+            <input type="checkbox" th:field="*{deleteFlag}" />
+        </div>
+
+        <button type="submit" th:text="${employee.id} ? '更新' : '登録'">更新</button>
+    </form>
+    
+    <hr/>
+    <a href="/employees">一覧に戻る</a>
+</body>
+</html>
