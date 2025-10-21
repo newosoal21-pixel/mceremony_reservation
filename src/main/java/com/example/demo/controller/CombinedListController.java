@@ -16,7 +16,7 @@ import com.example.demo.repository.ShuttleBusReservationRepository;
 import com.example.demo.repository.VisitorRepository;
 
 @Controller
-@RequestMapping("/dashboard") // 例: /dashboard にアクセス
+@RequestMapping("/dashboard") //  /dashboard にアクセス
 public class CombinedListController {
 
     private final ParkingRepository parkingRepository;

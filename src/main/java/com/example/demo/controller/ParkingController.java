@@ -12,20 +12,17 @@ import com.example.demo.model.Parking;
 import com.example.demo.model.ParkingStatus;
 import com.example.demo.repository.ParkingRepository;
 import com.example.demo.repository.ParkingStatusRepository;
-import com.example.demo.repository.VisitSituationRepository;
 
 @Controller
 @RequestMapping("/parkings")
 public class ParkingController {
 
     private final ParkingRepository parkingRepository;
-    private final VisitSituationRepository visitsituationRepository;
     private final ParkingStatusRepository parkingStatusRepository;
 
     @Autowired
-    public ParkingController(ParkingRepository parkingRepository, VisitSituationRepository visitsituationRepository, ParkingStatusRepository parkingStatusRepository) {
+    public ParkingController(ParkingRepository parkingRepository, ParkingStatusRepository parkingStatusRepository) {
         this.parkingRepository = parkingRepository;
-        this.visitsituationRepository = visitsituationRepository;
         this.parkingStatusRepository = parkingStatusRepository;
     }
 
@@ -40,7 +37,7 @@ public class ParkingController {
         List<Parking> parkings = parkingRepository.findAll();
         model.addAttribute("parkings", parkings);
         
-     // 2. 利用状況リストの取得と追加 (🚨 この処理が不足している可能性が高い)
+     // 2. 利用状況リストの取得と追加 
         List<ParkingStatus> parkingStatuses = parkingStatusRepository.findAll(); 
         model.addAttribute("parkingStatuses", parkingStatuses); 
         
