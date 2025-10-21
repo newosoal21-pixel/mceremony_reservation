@@ -186,7 +186,8 @@ h2 {
 .excel-table td.js-visit-situation,
 .excel-table td.js-bus-status,
 .excel-table td.js-vehicle-number-field,
-.excel-table td.js-remarks-field {
+.excel-table td.js-remarks-field,
+.excel-table td.js-remarks-field-visit  {
     position: relative; 
     overflow: visible; 
 }
@@ -516,17 +517,16 @@ h2 {
         box-sizing: border-box; 
         padding: 5px; 
         min-height: 50px !important; 
-        overflow: hidden !important; 
+        /* overflow: hidden !important; */ 
         font-size: 14px;
         line-height: 1.4;
         background-color: transparent !important; 
         position: relative; 
     }
     
-    /* 🔴 100%幅にしたいセル（整理番号, 日時, 備考欄） */
-    .excel-table tr > td:first-child,    /* 整理番号 */
-    .excel-table tr > td:nth-child(2),   /* 来館予定日時 */
-    .excel-table td.js-remarks-field {   /* 備考欄 */
+    /* 🔴 100%幅にしたいセル（備考欄） */
+    .excel-table td.js-remarks-field,
+    .excel-table td.js-remarks-field-visit {   /* 備考欄 */
         flex-basis: 100% !important; /* Flexboxで100%幅を確保 */
         margin-left: 0;
         margin-right: 0;
@@ -551,34 +551,60 @@ h2 {
         margin-right: auto; /* 💡 右マージンをautoにして、左端に押し付ける */
     }
     
-    /* 🔴 セルの表示順序を order で制御し、意図しない回り込みを防ぐ */
-    /* これにより、駐車位置の後、利用状況が必ず次の行の先頭に来るようにする */
-    
-    /* 1, 2行目（100%幅） */
-    .excel-table tr > td:nth-child(1) { order: 1; } /* 整理番号 */
-    .excel-table tr > td:nth-child(2) { order: 2; } /* 来館予定日時 */
-    
-    /* 3行目（駐車証No. & 駐車位置ペア） */
-    .excel-table td.js-permit-number { order: 3; } 
-    .excel-table td.js-permit-location { order: 4; } 
-    
-    /* 4行目以降（50%幅ペア） */
-    .excel-table tr > td:nth-child(5) { order: 5; } /* 利用状況 (50%幅, 左端) */
-    .excel-table tr > td:nth-child(6) { order: 6; } /* 駐車場利用 (50%幅, 右端) */
-    .excel-table tr > td:nth-child(7) { order: 7; } 
-    .excel-table tr > td:nth-child(8) { order: 8; } 
-    .excel-table tr > td:nth-child(9) { order: 9; } 
-    .excel-table tr > td:nth-child(10) { order: 10; } 
-    .excel-table tr > td:nth-child(11) { order: 11; } 
-    .excel-table tr > td:nth-child(12) { order: 12; } 
-    .excel-table tr > td:nth-child(13) { order: 13; } 
-    
-    .excel-table td.js-remarks-field { order: 99; flex-basis: 100% !important; } /* 備考欄は最後に100%幅で表示 */
-    
-    /* 💡 order: 5 のセルを確実に左端に配置するため、左マージンをリセット */
-    .excel-table tr > td:nth-child(5) { 
-        margin-left: 0 !important; /* 利用状況を左端に寄せる */
+	/* 🔴 セルの表示順序を order で制御し、意図しない回り込みを防ぐ */
+	/* ---------------------------------------------------- */
+    /* 🔥 新しいルール：共通クラスによる最優先表示 */
+    /* ---------------------------------------------------- */
+    /* 1. リストID (js-list-id-field) を最優先（先頭）に表示 */
+    .excel-table td.js-list-id-field { 
+        order: 1 !important; 
+        flex-basis: 100% !important; 
+        margin-left: 0 !important; 
     }
+
+    /* 2. 更新日時 (js-update-time-field) を備考欄の直前に移動 (order: 98) */
+    .excel-table td.js-update-time-field { 
+        order: 98 !important; 
+        flex-basis: 49% !important; 
+        margin-right: 0 !important; 
+    }
+
+    /* ---------------------------------------------------- */
+	/* 3. 来館予定日時（td:nth-child(2)）を2番目（IDの直後）に表示 */
+	.excel-table tr > td:nth-child(2) { 
+        order: 2 !important; /* 🔥 order: 2に変更 */
+        flex-basis: 100% !important; 
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+	/* 4. td:nth-child(3) 以降の order を 3, 4, 5... と連番で振り直す */
+	.excel-table tr > td:nth-child(3) { order: 3; }  /* (用件と続柄/用件) */
+	.excel-table tr > td:nth-child(4) { order: 4; }  /* (車両ナンバー/来館者氏名) */
+	.excel-table tr > td:nth-child(5) { order: 5; }  /* (来館者氏名/参列家名) */
+	.excel-table tr > td:nth-child(6) { order: 6; }  /* (参列家名/担当) */
+	.excel-table tr > td:nth-child(7) { order: 7; }  /* (担当/対応完了時刻) */
+	.excel-table tr > td:nth-child(8) { order: 8; }  /* (出庫時刻/来館状況) */
+    
+    /* 駐車場リストの特定フィールドの order を調整 (td:nth-child() を上書き) */
+	.excel-table td.js-permit-number { order: 9; } /* 駐車証No. (Parking List 9列目) */
+	.excel-table td.js-permit-location { order: 10; } /* 駐車位置 (Parking List 10列目) */
+
+    /* 11列目以降を調整 */
+	.excel-table tr > td:nth-child(9) { order: 9; }
+	.excel-table tr > td:nth-child(10) { order: 10; }
+    .excel-table tr > td:nth-child(11) { order: 11; }
+    
+    /* 12列目と13列目の order は更新日時(98)と備考欄(99)の前になるように調整 */
+    .excel-table tr > td:nth-child(12) { order: 12; }
+    .excel-table tr > td:nth-child(13) { order: 13; }
+    
+	/* 備考欄は最後に表示 */
+	.excel-table td.js-remarks-field,
+	.excel-table td.js-remarks-field-visit { 
+	    order: 99 !important; /* 最後に表示することを保証 */
+	    flex-basis: 100% !important; 
+	} 
     
     /* 3. ヘッダー情報（ラベル）の表示 (維持) */
     .excel-table td::before {
@@ -605,7 +631,7 @@ h2 {
     .excel-table .edit-mode-select,
     .excel-table .remarks-edit-form,
     .excel-table td .vehicle-number-form { 
-        position: static !important; 
+        position: static; 
         display: block; 
         width: 100%;
         min-width: auto;

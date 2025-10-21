@@ -67,7 +67,7 @@ public class Visitor {
     /**
      * visit_situation_id (INT NOT NULL) FOREIGN KEY REFERENCES VISIT_SITUATIONS
      */
-    @ManyToOne(fetch = FetchType.LAZY) 
+    @ManyToOne(fetch = FetchType.EAGER) 
     @JoinColumn(name = "visit_situation_id", nullable = false)
     private VisitSituation visitSituation; // VisitSituationエンティティへの関連
 
@@ -134,7 +134,8 @@ public class Visitor {
 	public void setManagerName(String managerName) {
 		this.managerName = managerName;
 	}
-
+	
+	
 	public LocalDateTime getCompilationCmpTime() {
 		return compilationCmpTime;
 	}

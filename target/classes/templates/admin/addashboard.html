@@ -2,19 +2,26 @@
 <html lang="ja" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+	
+	<link rel="stylesheet" th:href="@{/css/style.css}"> 
+	
     <title>管理者ダッシュボード</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    <h1>管理者ダッシュボード</h1>
-    <p>あなたは管理者としてログインしています。</p>
-    
-    <a th:href="@{/employees}">従業員一覧へ</a>
-    
-    <br>
-    <a th:href="@{/dashboard}">一般ユーザーダッシュボードへ</a>
-	<form th:action="@{/logout}" method="post">
-	    <button type="submit" style="padding: 5px 10px; cursor: pointer;">ログアウト</button>
-	</form>
-    <br>
+	<div class="login-container">
+	    <div><h1>管理者ダッシュボード</h1>
+	    <p>あなたは管理者としてログインしています。</p>
+	    
+	    <a th:href="@{/employees}">従業員一覧へ</a>
+	    
+	    <br>
+	    <a th:href="@{/dashboard}">一般ユーザーダッシュボードへ</a>
+		
+		<p><form th:action="@{/logout}" method="post">
+		    <button type="submit" style="padding: 5px 10px; cursor: pointer;">ログアウト</button>
+		</form></p>
+	    <br></div>
+	</div>
 </body>
 </html>

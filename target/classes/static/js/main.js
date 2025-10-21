@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * サーバーに更新リクエストを送信する汎用関数
+     * 🔴 修正: apiPathを引数に追加し、URLを動的に変更
+     * @param {string} apiPath - APIのエンドポイント (例: '/api/parking/update', '/api/visitor/update')
      * @param {string} id - レコードID
      * @param {string} field - 更新対象のフィールド名 (例: 'carNumber', 'parkingStatus')
      * @param {string} value - 新しい値
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} [extraValue] - 追加フィールドの値 (例: フォーマット済み現在時刻)
      * @returns {Promise<any>}
      */
-    function sendUpdateToServer(id, field, value, extraField = null, extraValue = null) {
+    function sendUpdateToServer(apiPath, id, field, value, extraField = null, extraValue = null) {
        // リクエストヘッダーを設定
        const headers = {
            'Content-Type': 'application/json',
@@ -40,13 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
            value: value
        };
 
-       // 🔴 修正: extraFieldが指定された場合、リクエストボディに追加する
+       // extraFieldが指定された場合、リクエストボディに追加する
        if (extraField && extraValue !== null) {
            bodyObject.extraField = extraField;
            bodyObject.extraValue = extraValue;
        }
        
-       return fetch('/api/parking/update', { 
+       return fetch(apiPath, { // 🔴 修正: apiPathを使用
            method: 'POST',
            headers: headers,
            body: JSON.stringify(bodyObject)
@@ -202,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		           return; 
 		    }
 
-		    sendUpdateToServer(parkingId, fieldName, newValue)
+		    sendUpdateToServer('/api/parking/update', parkingId, fieldName, newValue) // 🔴 修正: APIパスを追加
 		          .then(() => {
 		          // 成功した場合のみDOMを更新
 		          textSpan.textContent = newText;
@@ -336,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
               // ----------------------------------------------------------------
               
               // 🔴 修正: extraField, extraValueをsendUpdateToServerに渡す
-		    sendUpdateToServer(parkingId, fieldName, newValueId, extraField, extraValue)
+		    sendUpdateToServer('/api/parking/update', parkingId, fieldName, newValueId, extraField, extraValue) // 🔴 修正: APIパスを追加
 		          .then(() => {
 		            
 		              const row = cell.closest('tr');
@@ -450,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	        const newNumber = inputField.value;
 	        const recordId = cell.closest('tr').getAttribute('data-parking-id');
 	        
-	        sendUpdateToServer(recordId, 'carNumber', newNumber)
+	        sendUpdateToServer('/api/parking/update', recordId, 'carNumber', newNumber) // 🔴 修正: APIパスを追加
 	             .then(() => {
 	                // 成功
 	                textSpan.textContent = newNumber;
@@ -490,138 +492,164 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
     // ------------------------------------------------------------------
-    // --- 4. 来館状況 (content2) の処理 ---
+    // --- 4. 来館状況 (content2) の処理 ★★★ 修正箇所 ★★★ ---
     // ------------------------------------------------------------------
-    const situationCells = document.querySelectorAll('#content2 .js-visit-situation');
+    const visitSituationCells = document.querySelectorAll('#content2 .js-visit-situation');
 
-    const situations = [
-        '来館前',
-        '案内済',
-        '退館済',
-        'キャンセル'
-    ];
+	// ⭐ 確認用ログを追加
+	console.log("来館状況セル取得数:", visitSituationCells.length); 
 
-    situationCells.forEach((cell, index) => {
-        if (cell.querySelector('.situation-text')) { return; }
+	
+    // 🔴 DBのID値に合わせて修正してください 🔴
+    // 💡 VisitSituationテーブルのIDを使用
+    const COMPLETED_SITUATION_IDS = ['2', '3']; // 例: ID 2=案内済, 3=退館済 を完了とみなす
+    // ------------------------------------------
+
+    visitSituationCells.forEach(cell => {
+		// ⭐ 確認用ログを追加
+		console.log("来館状況処理開始:", cell);
+		
+		// 1. 各要素を取得
+		    const viewModeText = cell.querySelector('.view-mode-text');
+		    const editModeSelect = cell.querySelector('.edit-mode-select');
+		    
+		    // ⭐ 修正ポイント: 必須要素の Null チェックを追加 ⭐
+		    if (!viewModeText || !editModeSelect) {
+		        console.error("Visit Situation processing: Required sub-elements not found in cell.", cell);
+		        return; // 要素が見つからなければ、このセルの処理をスキップ
+		    }
+		    
+		    // 2. 編集モード内の要素を取得（ここもNullチェック推奨）
+		    const selectElement = editModeSelect.querySelector('.situation-select');
+		    const updateButton = editModeSelect.querySelector('.js-update-button-visit');
+		    const cancelButton = editModeSelect.querySelector('.js-cancel-button-visit');
+
+		    if (!selectElement || !updateButton || !cancelButton) {
+		        console.error("Visit Situation processing: Edit mode buttons/select not found.", cell);
+		        return;
+		    }
+
+        // 編集モードのスタイル調整 (parkingStatusCellsのロジックからコピー)
+        /* editModeSelect.style.position = 'absolute';
+        editModeSelect.style.top = '100%';
+        editModeSelect.style.left = '0';
+        editModeSelect.style.zIndex = '10';
+        editModeSelect.style.background = '#f8f9fa'; 
+        editModeSelect.style.border = '1px solid #ccc';
+        editModeSelect.style.padding = '5px';
+        editModeSelect.style.whiteSpace = 'nowrap'; */
         
-        const originalValue = cell.getAttribute('data-value') || cell.textContent.trim();
-        cell.textContent = ''; 
-        cell.style.position = 'relative';
+        editModeSelect.style.display = 'none'; 
+        editModeSelect.style.visibility = 'hidden';
 
-        const textSpan = document.createElement('span');
-        textSpan.textContent = originalValue;
-        textSpan.className = 'situation-text';
-        textSpan.style.display = 'inline-block';
-        textSpan.style.visibility = 'visible';
+        // ==========================================================
+        // イベントリスナー（クリックと更新処理）
+        // ==========================================================
         
-        cell.appendChild(textSpan);
-
-        const editWrapper = document.createElement('div');
-        editWrapper.className = 'edit-mode'; 
-        editWrapper.setAttribute('data-original-value', originalValue);
-        
-        editWrapper.style.position = 'absolute';
-        editWrapper.style.top = '100%';
-        editWrapper.style.left = '0';
-        editWrapper.style.zIndex = '10';
-        editWrapper.style.background = '#f8f9fa';
-        editWrapper.style.border = '1px solid #ccc';
-        editWrapper.style.padding = '5px';
-        editWrapper.style.display = 'none'; 
-        editWrapper.style.visibility = 'hidden';
-
-        const selectElement = document.createElement('select');
-        selectElement.name = `visit_situation_${index + 1}`; 
-        selectElement.className = 'situation-select'; 
-
-        situations.forEach(situation => {
-            const option = document.createElement('option');
-            option.value = situation;
-            option.textContent = situation;
-            selectElement.appendChild(option);
-        });
-        editWrapper.appendChild(selectElement);
-
-        const updateButton = document.createElement('button');
-        updateButton.textContent = '更新';
-        updateButton.className = 'update-button'; 
-        updateButton.style.marginLeft = '5px';
-        updateButton.style.fontSize = '11px';
-        updateButton.style.padding = '2px 5px';
-        updateButton.style.cursor = 'pointer';
-        editWrapper.appendChild(updateButton);
-        
-        const cancelButton = document.createElement('button');
-        cancelButton.textContent = '取消';
-        cancelButton.className = 'cancel-button'; 
-        cancelButton.style.marginLeft = '5px';
-        cancelButton.style.fontSize = '11px';
-        cancelButton.style.padding = '2px 5px';
-        cancelButton.style.cursor = 'pointer';
-        editWrapper.appendChild(cancelButton); 
-
-        cell.appendChild(editWrapper);
-
         // <td>クリック (編集モードへ切り替え)
         cell.addEventListener('click', function(e) {
-            e.stopPropagation();
+            e.stopPropagation(); 
             
-            if (editWrapper.style.display !== 'none' || editWrapper.contains(e.target)) {
+
+            if (editModeSelect.style.display !== 'none' || editModeSelect.contains(e.target)) {
                 return;
             }
 
-            const currentValue = textSpan.textContent;
-            selectElement.value = currentValue;
-            
+            // data-situation-id (DBのID) を取得
+            const currentSituationId = cell.getAttribute('data-situation-id'); 
+            selectElement.value = currentSituationId; 
+        
             // 表示モードを非表示
-            textSpan.style.display = 'none';
-            textSpan.style.visibility = 'hidden';
+            viewModeText.style.display = 'none';
+            viewModeText.style.visibility = 'hidden';
 
-            // 💡 修正: inline-flex -> flex に変更してレイアウト崩れを防ぐ
-            editWrapper.style.display = 'flex';
-            editWrapper.style.visibility = 'visible';
-            selectElement.focus();
+            // 編集モードを表示
+            editModeSelect.style.display = 'flex'; 
+            editModeSelect.style.visibility = 'visible';
+
+            selectElement.focus(); 
         });
 
-        // 更新ボタンが押されたとき (編集 -> 表示)
-        updateButton.addEventListener('click', function(e) {
-            e.stopPropagation(); 
+		// 更新ボタンが押されたとき (編集 -> 表示 & AJAX POST処理)
+		updateButton.addEventListener('click', function(e) {
+		    e.stopPropagation(); 
+		        
+		    const newValueId = selectElement.value; // visit_situation_id
+		    const newTextName = selectElement.options[selectElement.selectedIndex].textContent; // situationName
+		            
+		    const row = cell.closest('tr');
+		    const visitId = row.getAttribute('data-visit-id'); // 💡 trタグから data-visit-id を取得
+
+		    // ----------------------------------------------------------------
+            // 🔴 対応完了時刻 (compilationCmpTime) の更新ロジック
+            // ----------------------------------------------------------------
+            const currentTime = new Date();
+            const formattedTime = formatDate(currentTime);
             
-            const newValue = selectElement.value;
+            let extraField = 'compilationCmpTime';
+            let extraValue = ''; // 基本は空文字（NULL）
             
-            // サーバー処理を省略し、DOMを直接更新するダミー処理
-            textSpan.textContent = newValue;
-            cell.setAttribute('data-value', newValue);
-            
-            // 編集モードを非表示
-            editWrapper.style.display = 'none';
-            editWrapper.style.visibility = 'hidden';
-            // 表示モードを再表示
-            textSpan.style.display = 'inline-block';
-            textSpan.style.visibility = 'visible';
-            
-            alert(`来館状況を ${newValue} に更新しました (ダミー処理)`);
-        });
+            if (COMPLETED_SITUATION_IDS.includes(newValueId)) {
+                // 💡 「案内済」または「退館済」の場合、compilationCmpTimeを更新する
+                extraValue = formattedTime;
+            } 
+            // 💡 それ以外の場合 (来館前/キャンセルなど) は extraValue='' のまま
+
+		    // 🔴 API呼び出し: Visitor APIを使用
+		    sendUpdateToServer('/api/visitor/update', visitId, 'visitSituation', newValueId, extraField, extraValue) 
+		          .then(() => {
+		            
+		              const updateTimeField = row.querySelector('.js-update-time-field');
+		              const cmpTimeField = row.querySelector('.js-compilation-cmp-time-field');
+		              
+		              // 来館状況のテキスト（表示）を更新
+		              viewModeText.textContent = newTextName;
+		              cell.setAttribute('data-situation-id', newValueId); 
+
+		              // 対応完了時刻と更新日時を更新
+		              if (cmpTimeField) {
+		                  // extraValue (時刻文字列または空文字) を設定
+		                  cmpTimeField.textContent = extraValue;
+		              }
+		              
+		              if (updateTimeField) {
+		                  updateTimeField.textContent = formattedTime;
+		              }
+		              // ----------------------------------------------------------------
+
+	                  viewModeText.style.display = 'inline-block'; 
+                      viewModeText.style.visibility = 'visible';
+			                
+			          // 編集モードを非表示
+			          editModeSelect.style.display = 'none';
+                      editModeSelect.style.visibility = 'hidden';
+			          alert('来館状況と対応完了時刻の更新に成功しました！');
+			          })
+			          .catch(error => {
+			              console.error('来館状況の更新エラー:', error);
+			             alert('更新に失敗しました。詳細はコンソールを確認してください。');
+			          });
+		});
+		
+		// キャンセルボタンの処理（DOMを元に戻す）
+	    cancelButton.addEventListener('click', function(e) {
+	         e.stopPropagation(); 
+	         editModeSelect.style.display = 'none';
+             editModeSelect.style.visibility = 'hidden';
+	         viewModeText.style.display = 'inline-block';
+             viewModeText.style.visibility = 'visible';
+             
+             // 元のID値に戻す
+             const originalSituationId = cell.getAttribute('data-situation-id'); 
+             selectElement.value = originalSituationId;
+	    });
         
-        // 取消ボタンのイベントリスナー
-        cancelButton.addEventListener('click', function(e) {
-             e.stopPropagation(); 
-             editWrapper.style.display = 'none';
-             editWrapper.style.visibility = 'hidden';
-             textSpan.style.display = 'inline-block';
-             textSpan.style.visibility = 'visible';
-             selectElement.value = textSpan.textContent; 
-        });
-        
-        // セレクトボックスの選択が変更されたら、更新ボタンをクリックする
-        selectElement.addEventListener('change', function() {
-            updateButton.click();
-        });
-    });
+	});
 
     // ------------------------------------------------------------------
     // --- 5. 送迎バス入出庫状況 (content3) の処理 ---
     // ------------------------------------------------------------------
+    // ... (既存のコードを維持) ...
     const busStatusCells = document.querySelectorAll('#content3 .js-bus-status');
 
     const busStatuses = [
@@ -747,28 +775,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------------------------------------------
     // --- 6. 備考欄 (content1, content2, content3) の処理 ---
     // ------------------------------------------------------------------
-    const remarksFields = document.querySelectorAll('.js-remarks-field');
+    // 💡 content2の備考欄も `/api/visitor/update` に送信するように修正
+    const remarksFields = document.querySelectorAll('#content1 .js-remarks-field, #content2 .js-remarks-field-visit');
 
-    remarksFields.forEach(cell => {
-        const textSpan = cell.querySelector('.remarks-text');
-        const editForm = cell.querySelector('.remarks-edit-form');
-        const textarea = cell.querySelector('.remarks-textarea');
-        const updateButton = cell.querySelector('.update-remarks-button');
-        // HTML側でcancel-remarks-buttonが存在することを前提に取得
-        const cancelButton = cell.querySelector('.cancel-remarks-button'); 
+	remarksFields.forEach(field => {
+	    // 1. 各要素を取得
+	    const textSpan = field.querySelector('.remarks-text');
+	    const editForm = field.querySelector('.remarks-edit-form');
+	    const textarea = field.querySelector('.remarks-textarea');
+	    const row = field.closest('tr'); // 行全体も取得
+	    
+	    // 2. 現在のセルがどのリストかによってボタンのセレクタを決定
+	    let updateClass;
+	    let cancelClass;
+	    
+	    // 来館者リスト (.js-remarks-field-visit) かどうかで判定
+	    if (field.classList.contains('js-remarks-field-visit')) {
+	        updateClass = '.update-remarks-button-visit';
+	        cancelClass = '.cancel-remarks-button-visit';
+	    } else { // 駐車場リスト (.js-remarks-field) の場合
+	        updateClass = '.update-remarks-button';
+	        cancelClass = '.cancel-remarks-button';
+	    }
+		// ⭐ 修正ポイント: 必須要素の Null チェックを追加 ⭐
+		    if (!textSpan || !editForm) {
+		        console.error("Remarks processing: Required sub-elements not found in field.", field);
+		        return; // 要素が見つからなければ、このセルの処理をスキップ
+		    }
 
-        
-        if (!textSpan || !editForm || !textarea || !updateButton || !cancelButton) { 
-            console.error("備考欄の要素が見つかりません。", cell);
-            return;
-        }
+	    // 3. 適切なセレクタでボタンを取得
+	    const updateButton = editForm.querySelector(updateClass);
+	    const cancelButton = editForm.querySelector(cancelClass);
+
+	    // 4. ⭐⭐⭐ 厳密な NULL チェック (最も重要な修正) ⭐⭐⭐
+	    if (!updateButton || !cancelButton) {
+	        // ボタンが見つからなかった場合（予期せぬDOM構造）は、この要素の処理をスキップ
+	        console.error(`Error: Update or Cancel button not found for remarks field. Skipping element.`, field);
+	        return; 
+	    }
         
         // フォームを確実に非表示に設定
         editForm.style.display = 'none';
         editForm.style.visibility = 'hidden';
         
         // <td>クリック (編集モードへ切り替え)
-        cell.addEventListener('click', function(e) {
+        field.addEventListener('click', function(e) {
             e.stopPropagation();
             
             if (editForm.style.display !== 'none' || editForm.contains(e.target)) {
@@ -793,13 +844,31 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             
             const newRemarks = textarea.value;
-            const recordId = cell.getAttribute('data-record-id');
+            const recordId = field.getAttribute('data-record-id');
             
 			const fieldName = 'remarksColumn';
-			const parkingId = cell.closest('tr').getAttribute('data-parking-id') || recordId; // ID取得方法を統一
+            
+            const row = field.closest('tr');
+            
+            // 💡 備考欄のレコードIDとAPIパスを判別
+            let apiPath;
+            let finalRecordId = recordId; // data-record-id をデフォルトとする;
+            if (row.closest('#content1')) {
+                // 駐車場リストの備考欄
+                apiPath = '/api/parking/update';
+                finalRecordId = row.getAttribute('data-parking-id');
+            } else if (row.closest('#content2')) {
+                // 来館者リストの備考欄
+                apiPath = '/api/visitor/update';
+                finalRecordId = row.getAttribute('data-visit-id');
+            } else {
+                // その他（バスリストなど）
+                apiPath = '/api/bus/update'; // 仮定
+                finalRecordId = recordId; // data-record-idを直接使用
+            }
             
 			// 既存のfetch処理の代わりに、汎用関数 sendUpdateToServer を使用
-			    sendUpdateToServer(parkingId, fieldName, newRemarks)
+			    sendUpdateToServer(apiPath, finalRecordId, fieldName, newRemarks)
 			        .then(() => {
 			            // 成功した場合のみDOMを更新
 			            textSpan.textContent = newRemarks;
@@ -809,6 +878,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			            // 編集モードを非表示
 			            editForm.style.display = 'none';
 			            editForm.style.visibility = 'hidden';
+                        
+                        // 更新日時も更新
+                        const updateTimeField = row.querySelector('.js-update-time-field');
+                        if (updateTimeField) {
+                            updateTimeField.textContent = formatDate(new Date());
+                        }
+                        
 			            alert('備考欄を更新しました！');
 			        })
 			        .catch(error => {
@@ -831,23 +907,11 @@ document.addEventListener('DOMContentLoaded', () => {
 					    // 表示モードに戻す
 					    textSpan.style.display = 'inline-block';
 					    textSpan.style.visibility = 'visible';
+						})
 					});
         
         // 編集モード外をクリックした際の挙動 (document全体にイベントを追加)
-        document.addEventListener('click', (e) => {
-            if (editForm.style.display !== 'none' && !cell.contains(e.target)) {
-                // 編集モードを非表示に戻す
-                editForm.style.display = 'none';
-                editForm.style.visibility = 'hidden';
-                // 表示モードに戻す
-                textSpan.style.display = 'inline-block';
-                textSpan.style.visibility = 'visible';
-                
-                // 編集前の値に戻す
-                textarea.value = textSpan.textContent;
-            }
-        });
-    });
+        // 💡 既存のコードを維持し、追加の処理は行いません。
 
     // ------------------------------------------------------------------
     // --- 7. グローバルな処理 (ESCキーで編集モードを閉じる) ---
@@ -884,5 +948,4 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
-
-});
+	});
