@@ -92,7 +92,11 @@ public class ShuttleBusReservation {
      * update_time (DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)
      * データベースの自動更新機能に委ねる
      */
-    @Column(name = "update_time", nullable = false, updatable = false, insertable = false)
+    // 💡 注意: @Columnのinsertable=false, updatable=false設定は、
+    // DB側で自動更新される場合に適切ですが、Java側で明示的に値をセットしたい場合、
+    // JPAではこの設定を削除するか、セッター定義だけで乗り切れるか環境依存になります。
+    // 今回はセッターを追加することでJavaからのセットを試みます。
+    @Column(name = "update_time", nullable = false) 
     private LocalDateTime updateTime;
 
     /**
@@ -135,9 +139,6 @@ public class ShuttleBusReservation {
     }
 
     // 主キーIDは通常、setterを持ちません（AUTO_INCREMENTのため）
-    // public void setId(Integer id) {
-//         this.id = id;
-    // }
 
     public LocalDateTime getVisitReservationTime() {
         return visitReservationTime;
@@ -215,10 +216,12 @@ public class ShuttleBusReservation {
         return updateTime;
     }
 
-    // updateTimeはDBで自動更新されるため、setterは定義しないか、あっても外部からは使用しない
-    // public void setUpdateTime(LocalDateTime updateTime) {
-//         this.updateTime = updateTime;
-    // }
+    /**
+     * コントローラー側で更新日時を明示的にセットするために追加。
+     */
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
 
     public String getRemarksColumn() {
         return remarksColumn;

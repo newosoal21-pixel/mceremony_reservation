@@ -772,11 +772,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // ------------------------------------------------------------------
-    // --- 6. 備考欄 (content1, content2, content3) の処理 ---
-    // ------------------------------------------------------------------
-    // 💡 content2の備考欄も `/api/visitor/update` に送信するように修正
-    const remarksFields = document.querySelectorAll('#content1 .js-remarks-field, #content2 .js-remarks-field-visit');
+	// ------------------------------------------------------------------
+	// --- 6. 備考欄 (content1, content2, content3) の処理 ---
+	// ------------------------------------------------------------------
+
+	// ⭐ 修正1: #content3 の備考欄を追加 ⭐
+	const remarksFields = document.querySelectorAll('#content1 .js-remarks-field, #content2 .js-remarks-field-visit, #content3 .js-remarks-field');
 
 	remarksFields.forEach(field => {
 	    // 1. 各要素を取得
@@ -785,6 +786,12 @@ document.addEventListener('DOMContentLoaded', () => {
 	    const textarea = field.querySelector('.remarks-textarea');
 	    const row = field.closest('tr'); // 行全体も取得
 	    
+	    // ⭐ 修正ポイント: 必須要素の Null チェックを追加 ⭐
+	    if (!textSpan || !editForm || !textarea || !row) {
+	        console.error("Remarks processing: Required sub-elements not found in field or row.", field);
+	        return; // 要素が見つからなければ、このセルの処理をスキップ
+	    }
+
 	    // 2. 現在のセルがどのリストかによってボタンのセレクタを決定
 	    let updateClass;
 	    let cancelClass;
@@ -793,15 +800,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	    if (field.classList.contains('js-remarks-field-visit')) {
 	        updateClass = '.update-remarks-button-visit';
 	        cancelClass = '.cancel-remarks-button-visit';
-	    } else { // 駐車場リスト (.js-remarks-field) の場合
+	    } else { // 駐車場リスト (.js-remarks-field) またはバスリスト (.js-remarks-field) の場合
 	        updateClass = '.update-remarks-button';
 	        cancelClass = '.cancel-remarks-button';
 	    }
-		// ⭐ 修正ポイント: 必須要素の Null チェックを追加 ⭐
-		    if (!textSpan || !editForm) {
-		        console.error("Remarks processing: Required sub-elements not found in field.", field);
-		        return; // 要素が見つからなければ、このセルの処理をスキップ
-		    }
 
 	    // 3. 適切なセレクタでボタンを取得
 	    const updateButton = editForm.querySelector(updateClass);
@@ -813,105 +815,115 @@ document.addEventListener('DOMContentLoaded', () => {
 	        console.error(`Error: Update or Cancel button not found for remarks field. Skipping element.`, field);
 	        return; 
 	    }
-        
-        // フォームを確実に非表示に設定
-        editForm.style.display = 'none';
-        editForm.style.visibility = 'hidden';
-        
-        // <td>クリック (編集モードへ切り替え)
-        field.addEventListener('click', function(e) {
-            e.stopPropagation();
-            
-            if (editForm.style.display !== 'none' || editForm.contains(e.target)) {
-                 return;
-            }
-            
-            textarea.value = textSpan.textContent;
-            
-            // 表示モードを非表示
-            textSpan.style.display = 'none';
-            textSpan.style.visibility = 'hidden';
-            
-            // 💡 修正: 既に 'flex' のためそのまま
-            editForm.style.display = 'flex'; // フォーム内の要素に合わせてflexに変更
-            editForm.style.visibility = 'visible';
-            textarea.focus(); 
-        });
+	    
+	    // フォームを確実に非表示に設定
+	    editForm.style.display = 'none';
+	    editForm.style.visibility = 'hidden';
+	    
+	    // <td>クリック (編集モードへ切り替え)
+	    field.addEventListener('click', function(e) {
+	        e.stopPropagation();
+	        
+	        if (editForm.style.display !== 'none' || editForm.contains(e.target)) {
+	             return;
+	        }
+	        
+	        textarea.value = textSpan.textContent;
+	        
+	        // 表示モードを非表示
+	        textSpan.style.display = 'none';
+	        textSpan.style.visibility = 'hidden';
+	        
+	        // 💡 修正: 既に 'flex' のためそのまま
+	        editForm.style.display = 'flex'; // フォーム内の要素に合わせてflexに変更
+	        editForm.style.visibility = 'visible';
+	        textarea.focus(); 
+	    });
 
-        // 更新ボタンのイベントリスナー
-        updateButton.addEventListener('click', function(e) {
-            e.preventDefault(); 
-            e.stopPropagation();
-            
-            const newRemarks = textarea.value;
-            const recordId = field.getAttribute('data-record-id');
-            
-			const fieldName = 'remarksColumn';
-            
-            const row = field.closest('tr');
-            
-            // 💡 備考欄のレコードIDとAPIパスを判別
-            let apiPath;
-            let finalRecordId = recordId; // data-record-id をデフォルトとする;
-            if (row.closest('#content1')) {
-                // 駐車場リストの備考欄
-                apiPath = '/api/parking/update';
-                finalRecordId = row.getAttribute('data-parking-id');
-            } else if (row.closest('#content2')) {
-                // 来館者リストの備考欄
-                apiPath = '/api/visitor/update';
-                finalRecordId = row.getAttribute('data-visit-id');
-            } else {
-                // その他（バスリストなど）
-                apiPath = '/api/bus/update'; // 仮定
-                finalRecordId = recordId; // data-record-idを直接使用
-            }
-            
-			// 既存のfetch処理の代わりに、汎用関数 sendUpdateToServer を使用
-			    sendUpdateToServer(apiPath, finalRecordId, fieldName, newRemarks)
-			        .then(() => {
-			            // 成功した場合のみDOMを更新
-			            textSpan.textContent = newRemarks;
-			            // 表示モードを再表示
-			            textSpan.style.display = 'inline-block';
-			            textSpan.style.visibility = 'visible';
-			            // 編集モードを非表示
-			            editForm.style.display = 'none';
-			            editForm.style.visibility = 'hidden';
-                        
-                        // 更新日時も更新
-                        const updateTimeField = row.querySelector('.js-update-time-field');
-                        if (updateTimeField) {
-                            updateTimeField.textContent = formatDate(new Date());
-                        }
-                        
-			            alert('備考欄を更新しました！');
-			        })
-			        .catch(error => {
-			            console.error('備考欄の更新エラー:', error);
-			            alert('更新に失敗しました。詳細はコンソールを確認してください。');
-			            // 編集前の値に戻す
-			            textarea.value = textSpan.textContent; 
-			        });
-        }); 
-					// ⭐⭐ 取消ボタンのイベントリスナー ⭐⭐
-					cancelButton.addEventListener('click', function(e) {
-					    e.stopPropagation();
-					    
-					    // 編集前の値に戻す
-					    textarea.value = textSpan.textContent;
-					    
-					    // 編集モードを非表示に戻す
-					    editForm.style.display = 'none';
-					    editForm.style.visibility = 'hidden';
-					    // 表示モードに戻す
-					    textSpan.style.display = 'inline-block';
-					    textSpan.style.visibility = 'visible';
-						})
-					});
-        
-        // 編集モード外をクリックした際の挙動 (document全体にイベントを追加)
-        // 💡 既存のコードを維持し、追加の処理は行いません。
+	    // 更新ボタンのイベントリスナー
+	    updateButton.addEventListener('click', function(e) {
+	        e.preventDefault(); 
+	        e.stopPropagation();
+	        
+	        const newRemarks = textarea.value;
+	        const recordId = field.getAttribute('data-record-id');
+	        
+	        const fieldName = 'remarksColumn';
+	        
+	        const row = field.closest('tr');
+	        
+	        // 💡 備考欄のレコードIDとAPIパスを判別
+	        let apiPath;
+	        let finalRecordId = recordId; // data-record-id をデフォルトとする;
+	        
+	        if (row.closest('#content1')) {
+	            // 駐車場リストの備考欄
+	            apiPath = '/api/parking/update';
+	            finalRecordId = row.getAttribute('data-parking-id');
+	        } else if (row.closest('#content2')) {
+	            // 来館者リストの備考欄
+	            apiPath = '/api/visitor/update';
+	            finalRecordId = row.getAttribute('data-visit-id');
+	        } else if (row.closest('#content3')) {
+	            // ⭐ 修正2: 送迎バスリストの備考欄 ⭐
+	            apiPath = '/api/bus/update'; 
+	            // 送迎バスリストの行は data-record-id (field) または data-bus-id (row) からIDを取得
+	            // HTMLを確認したところ、IDは row の attribute にないため、tdの data-record-id を使用します。
+	            finalRecordId = recordId; 
+	        } else {
+	             // どのリストにも属さない場合のエラー処理
+	            console.error('Error: Failed to determine API path for remarks update.');
+	            alert('更新対象を特定できませんでした。');
+	            return;
+	        }
+	        
+	        // 既存のfetch処理の代わりに、汎用関数 sendUpdateToServer を使用
+	        sendUpdateToServer(apiPath, finalRecordId, fieldName, newRemarks)
+	            .then(() => {
+	                // 成功した場合のみDOMを更新
+	                textSpan.textContent = newRemarks;
+	                // 表示モードを再表示
+	                textSpan.style.display = 'inline-block';
+	                textSpan.style.visibility = 'visible';
+	                // 編集モードを非表示
+	                editForm.style.display = 'none';
+	                editForm.style.visibility = 'hidden';
+	                
+	                // 更新日時も更新
+	                const updateTimeField = row.querySelector('.js-update-time-field');
+	                if (updateTimeField) {
+	                    // formatDate 関数がグローバルに定義されていることを前提とする
+	                    updateTimeField.textContent = formatDate(new Date()); 
+	                }
+	                
+	                alert('備考欄を更新しました！');
+	            })
+	            .catch(error => {
+	                console.error('備考欄の更新エラー:', error);
+	                alert('更新に失敗しました。詳細はコンソールを確認してください。');
+	                // 編集前の値に戻す
+	                textarea.value = textSpan.textContent; 
+	            });
+	    }); 
+	    
+	    // ⭐⭐ 取消ボタンのイベントリスナー ⭐⭐
+	    cancelButton.addEventListener('click', function(e) {
+	        e.stopPropagation();
+	        
+	        // 編集前の値に戻す
+	        textarea.value = textSpan.textContent;
+	        
+	        // 編集モードを非表示に戻す
+	        editForm.style.display = 'none';
+	        editForm.style.visibility = 'hidden';
+	        // 表示モードに戻す
+	        textSpan.style.display = 'inline-block';
+	        textSpan.style.visibility = 'visible';
+	    });
+	});
+
+	// 編集モード外をクリックした際の挙動 (document全体にイベントを追加)
+	// 💡 既存のコードを維持し、追加の処理は行いません。
 
     // ------------------------------------------------------------------
     // --- 7. グローバルな処理 (ESCキーで編集モードを閉じる) ---

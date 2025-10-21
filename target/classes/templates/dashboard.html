@@ -261,7 +261,17 @@
 							                            
 							                            <td data-label="更新日時" class="group-2-col js-update-time-field" th:text="${bus.updateTime != null ? #temporals.format(bus.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 							                            
-							                            <td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${bus.id}" th:text="${bus.remarksColumn}"></td>
+														<td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${bus.id}">
+														    <span class="remarks-text" th:text="${bus.remarksColumn}"></span>
+														    
+														    <form class="remarks-edit-form" style="display: none; visibility: hidden;">
+														        <textarea class="remarks-textarea" 
+														                  th:data-original-value="${bus.remarksColumn}" 
+														                  th:text="${bus.remarksColumn}"></textarea>
+														        <button type="submit" class="update-remarks-button">更新</button>
+														        <button type="button" class="cancel-remarks-button">取消</button>
+														    </form>
+														</td>
 							                        </tr>
 							                    </tbody>
 							                </table>

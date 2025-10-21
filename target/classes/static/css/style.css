@@ -150,7 +150,13 @@ h2 {
     font-size: 12px; 
     table-layout: fixed; 
 }
+
+/* ★PC表示でテーブル要素のデフォルト動作を保証（PC崩れ防止） */
+.excel-table tr {
+    display: table-row; /* PC表示では行として動作 */
+}
 .excel-table th, .excel-table td {
+    display: table-cell; /* PC表示ではセルとして動作 */
     border: 1px solid #d4d4d4; 
     padding: 4px 6px; 
     text-align: left;
@@ -328,7 +334,6 @@ h2 {
 
 /* 1. 親<td>のレイアウトモデルをブロックまたはデフォルトに戻し、Flex/Gridを無効化 */
 .excel-table td.js-vehicle-number-field {
-    display: table-cell !important; /* tdのデフォルトに戻す */
     text-align: left !important; 
 }
 
@@ -447,9 +452,10 @@ h2 {
 
 
 /* ========================================================== */
-/* 📱 モバイル表示 (768px未満) の設定 - 💡 Flexbox 最終安定版 */
+/* 📱 モバイル表示 (768px未満) の設定 - 最終調整版 */
 /* ========================================================== */
 @media (max-width: 768px) {
+	
     /* 1. 全体コンテナ、ヘッダー、trの調整 */
     .excel-container {
         height: auto; 
@@ -469,7 +475,13 @@ h2 {
         margin-bottom: 10px;
         padding: 5px;
         background-color: transparent; 
-        overflow: hidden; 
+        
+        /* 🔴 最終対策: はみ出しを許可して描画バグを防ぐ */
+        overflow: visible !important; 
+        
+        /* 行全体が内容の高さまで拡張されるように強制 (埋没防止) */
+        height: auto !important; 
+        min-height: fit-content !important; 
     }
     
     /* ------------------------------------------- */
@@ -503,26 +515,54 @@ h2 {
     }
     /* ------------------------------------------- */
     
-    /* 2. すべてのセル(td)の基本スタイル - Flexアイテムとして制御 */
-    .excel-table td {
-        display: block; /* 内部のbefore/afterを維持するため */
-        flex-grow: 0;
-        flex-shrink: 0;
+	/* 2. すべてのセル(td)の基本スタイル - Flexアイテムとして制御 */
+	    .excel-table td {
+	        display: block; 
+	        flex-grow: 0;
+	        flex-shrink: 0;
+	        flex-basis: calc(50% - 2px); 
+	        margin: 1px; 
+	        border: 1px solid #eee; 
+	        box-sizing: border-box; 
+	        padding: 5px; 
+	        
+            /* ★修正: 他のセルのmin-heightを緩和し、内容ベースの高さも許容 (維持) */
+	        min-height: auto; 
+	        
+	        font-size: 14px;
+	        line-height: 1.4;
+	        background-color: transparent !important; 
+	        position: relative; 
+            
+            /* 他のセルはデフォルトの Flexアイテムの揃えに戻す (維持) */
+            align-self: flex-start; 
+	    }
         
-        /* 💡 デフォルトは50%幅 */
-        flex-basis: calc(50% - 2px); 
-        margin: 1px; /* セル間に隙間を設ける (合計2px) */
-        
-        border: 1px solid #eee; 
-        box-sizing: border-box; 
-        padding: 5px; 
-        min-height: 50px !important; 
-        /* overflow: hidden !important; */ 
-        font-size: 14px;
-        line-height: 1.4;
-        background-color: transparent !important; 
-        position: relative; 
-    }
+        /* 編集モード展開時に非編集テキストを非表示にする (維持) */
+        .excel-table td.js-parking-status.is-editing .situation-text {
+            display: none !important;
+        }
+
+	    /* 🔴 利用状況欄のセル (高さ計算とz-indexの起点) */
+	    .excel-table td.js-parking-status {
+	        /* 既存の修正を維持し、高さ自動拡張を強制 */
+	        height: auto !important; 
+	        min-height: fit-content !important; /* セルサイズを内容物に依存させる */
+            
+	        overflow: visible !important; 
+	        
+	        /* 利用状況セルのみ自律的な高さ拡張を強制 */
+	        align-self: flex-start !important; 
+            
+            /* min-heightは削除（維持） */
+            min-height: auto !important; 
+            
+            /* パディングは最低限に緩和 (維持) */
+            padding-bottom: 5px !important; 
+            
+            /* 🔴 Stacking Contextを強制（潜り込み対策） */
+            position: relative !important; 
+	    }
     
     /* 🔴 100%幅にしたいセル（備考欄） */
     .excel-table td.js-remarks-field,
@@ -532,29 +572,25 @@ h2 {
         margin-right: 0;
     }
 
-    /* 🔴 【最重要修正】駐車証No.と駐車位置のペアの幅を調整 */
+    /* 🔴 駐車証No.と駐車位置のペアの幅を調整 */
     
     /* 駐車証No. (横並び開始) */
     .excel-table tr > td.js-permit-number {
-        /* 💡 35%幅に設定。マージンとボーダーを考慮し、折り返しを確実に防ぐ */
         flex-basis: 49% !important; 
         min-width: 50px !important;
-        margin-left: 0; /* 左端に寄せる */
+        margin-left: 0; 
         margin-right: 1px;
     }
     /* 駐車位置 (横並び終了) */
     .excel-table tr > td.js-permit-location {
-        /* 💡 35%幅に設定 */
         flex-basis: 49% !important; 
         min-width: 50px !important;
         margin-left: 1px;
-        margin-right: auto; /* 💡 右マージンをautoにして、左端に押し付ける */
+        margin-right: auto; 
     }
     
-	/* 🔴 セルの表示順序を order で制御し、意図しない回り込みを防ぐ */
+	/* 🔴 セルの表示順序を order で制御 (維持) */
 	/* ---------------------------------------------------- */
-    /* 🔥 新しいルール：共通クラスによる最優先表示 */
-    /* ---------------------------------------------------- */
     /* 1. リストID (js-list-id-field) を最優先（先頭）に表示 */
     .excel-table td.js-list-id-field { 
         order: 1 !important; 
@@ -572,37 +608,34 @@ h2 {
     /* ---------------------------------------------------- */
 	/* 3. 来館予定日時（td:nth-child(2)）を2番目（IDの直後）に表示 */
 	.excel-table tr > td:nth-child(2) { 
-        order: 2 !important; /* 🔥 order: 2に変更 */
+        order: 2 !important; 
         flex-basis: 100% !important; 
         margin-left: 0;
         margin-right: 0;
     }
     
-	/* 4. td:nth-child(3) 以降の order を 3, 4, 5... と連番で振り直す */
-	.excel-table tr > td:nth-child(3) { order: 3; }  /* (用件と続柄/用件) */
-	.excel-table tr > td:nth-child(4) { order: 4; }  /* (車両ナンバー/来館者氏名) */
-	.excel-table tr > td:nth-child(5) { order: 5; }  /* (来館者氏名/参列家名) */
-	.excel-table tr > td:nth-child(6) { order: 6; }  /* (参列家名/担当) */
-	.excel-table tr > td:nth-child(7) { order: 7; }  /* (担当/対応完了時刻) */
-	.excel-table tr > td:nth-child(8) { order: 8; }  /* (出庫時刻/来館状況) */
+	/* 4. td:nth-child(3) 以降の order を 3, 4, 5... と連番で振り直す (中略) */
+	.excel-table tr > td:nth-child(3) { order: 3; }
+	.excel-table tr > td:nth-child(4) { order: 4; }
+	.excel-table tr > td:nth-child(5) { order: 5; }
+	.excel-table tr > td:nth-child(6) { order: 6; }
+	.excel-table tr > td:nth-child(7) { order: 7; }
+	.excel-table tr > td:nth-child(8) { order: 8; }
     
-    /* 駐車場リストの特定フィールドの order を調整 (td:nth-child() を上書き) */
-	.excel-table td.js-permit-number { order: 9; } /* 駐車証No. (Parking List 9列目) */
-	.excel-table td.js-permit-location { order: 10; } /* 駐車位置 (Parking List 10列目) */
+	.excel-table td.js-permit-number { order: 9; } 
+	.excel-table td.js-permit-location { order: 10; } 
 
-    /* 11列目以降を調整 */
 	.excel-table tr > td:nth-child(9) { order: 9; }
 	.excel-table tr > td:nth-child(10) { order: 10; }
     .excel-table tr > td:nth-child(11) { order: 11; }
     
-    /* 12列目と13列目の order は更新日時(98)と備考欄(99)の前になるように調整 */
     .excel-table tr > td:nth-child(12) { order: 12; }
     .excel-table tr > td:nth-child(13) { order: 13; }
     
 	/* 備考欄は最後に表示 */
 	.excel-table td.js-remarks-field,
 	.excel-table td.js-remarks-field-visit { 
-	    order: 99 !important; /* 最後に表示することを保証 */
+	    order: 99 !important; 
 	    flex-basis: 100% !important; 
 	} 
     
@@ -626,7 +659,7 @@ h2 {
         content: none !important;
     }
     
-    /* 🔴 編集モードのスタイル調整（モバイルではセル内に収める） (維持) */
+    /* 🔴 編集モードのスタイル調整（モバイルではセル内に収める） */
     .excel-table .edit-mode,
     .excel-table .edit-mode-select,
     .excel-table .remarks-edit-form,
@@ -637,20 +670,39 @@ h2 {
         min-width: auto;
     }
     
-    /* (以下、編集フォーム関連のスタイルは変更なし) */
+	/* 🔴 編集モードコンテナ (見切れと潜り込みの主犯/主対象) */
+	.excel-table .edit-mode-select {
+        padding: 0 !important; 
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        box-sizing: border-box; 
+        height: auto !important; 
+        min-height: fit-content !important;
+        
+        /* 🔴 最終対策: セルを確実に押し広げるためのマージンをさらに増加 */
+        margin-bottom: 60px !important; 
+        
+        /* 🔴 Stacking Contextを強制（潜り込み対策） */
+        z-index: 1000 !important; 
+    }
+
+    /* 車両ナンバーのフォームの調整 (維持) */
     .excel-table td .vehicle-number-form {
         display: block !important; 
         width: 100%;
         padding: 0 !important;
     }
     
+    /* 車両ナンバーのフォーム要素 (維持) */
     .excel-table td .vehicle-number-input {
         width: 100% !important; 
         display: block !important; 
         clear: both !important; 
-        margin-bottom: 5px !important; 
+        margin: 0 0 5px 0 !important; 
     }
 
+    /* 車両ナンバーのボタン (維持) */
     .excel-table td .update-vehicle-button,
     .excel-table td .cancel-vehicle-button {
         padding: 4px 5px;
@@ -670,12 +722,18 @@ h2 {
         margin-bottom: 5px;
     }
 
+    /* 🔴 編集モード内のボタンの最終調整 */
     .excel-table .edit-mode button,
     .excel-table .edit-mode-select button,
     .excel-table .remarks-edit-form button {
         width: 100%;
         margin-top: 3px !important;
         margin-left: 0 !important;
+        margin-bottom: 0 !important; 
+        padding: 4px 5px !important; 
+        
+        /* ボタンに強制的な高さを設定し、セルを押し広げる力を増す (維持) */
+        min-height: 30px !important; 
     }
     
     .excel-table .remarks-edit-form textarea {
@@ -697,7 +755,7 @@ h2 {
         margin-bottom: 10px;
         height: 120px; 
         padding: 0;
-        overflow: hidden; 
+        overflow: visible !important; 
     }
     .excel-table tr.no-data-row-mobile td {
         flex-basis: 100% !important; 
