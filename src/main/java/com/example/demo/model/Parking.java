@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -41,6 +40,12 @@ public class Parking {
      */
     @Column(name = "car_number", nullable = false, length = 64)
     private String carNumber;
+    
+    /**
+     * visitor_name (VARCHAR(64) NOT NULL)
+     */
+    @Column(name = "visitor_name", nullable = false, length = 64)
+    private String visitorName;
 
     /**
      * family_names (VARCHAR(64) NOT NULL)
@@ -88,14 +93,6 @@ public class Parking {
     // --- 外部キー関連マッピング ---
 
     /**
-     * visitor_id (INT NOT NULL) FOREIGN KEY REFERENCES VISITORS
-     * (このVisitorエンティティは、前々回に作成したものです)
-     */
-    @ManyToOne(fetch = FetchType.LAZY) 
-    @JoinColumn(name = "visitor_id", nullable = false)
-    private Visitor visitor; 
-
-    /**
      * parking_status_id (INT NOT NULL) FOREIGN KEY REFERENCES PARKING_STATUSES
      * (このParkingStatusエンティティは、前回作成したものです)
      */
@@ -116,17 +113,17 @@ public class Parking {
      * 新しいエンティティを作成するためのコンストラクタ（全必須フィールドと外部キーを含む）
      * ID、自動更新フィールド、NULL許容フィールド（visitReservationTime, departureTime, remarksColumn）は除外しています。
      */
-    public Parking(String errandsRelationship, String carNumber, String familyNames, 
+    public Parking(String errandsRelationship, String carNumber, String visitorName,String familyNames, 
                    String managerName, String parkingPermit, String parkingPosition, 
                    Visitor visitor, ParkingStatus parkingStatus) {
         
         this.errandsRelationship = errandsRelationship;
         this.carNumber = carNumber;
+        this.visitorName = visitorName;
         this.familyNames = familyNames;
         this.managerName = managerName;
         this.parkingPermit = parkingPermit;
         this.parkingPosition = parkingPosition;
-        this.visitor = visitor;
         this.parkingStatus = parkingStatus;
     }
 
@@ -166,6 +163,14 @@ public class Parking {
         this.carNumber = carNumber;
     }
 
+    public String getVisitorName() {
+        return visitorName;
+    }
+
+    public void setVisitorName(String visitorName) {
+        this.visitorName = visitorName;
+    }
+    
     public String getFamilyNames() {
         return familyNames;
     }
@@ -224,14 +229,6 @@ public class Parking {
     }
 
     // --- 外部キー関連のアクセサ ---
-
-    public Visitor getVisitor() {
-        return visitor;
-    }
-
-    public void setVisitor(Visitor visitor) {
-        this.visitor = visitor;
-    }
 
     public ParkingStatus getParkingStatus() {
         return parkingStatus;

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="_csrf" th:content="${_csrf.token}">
+	<meta name="_csrf_header" th:content="${_csrf.headerName}">
+	<title>CSVデータインポートとデータ管理</title>
+	    
+	<link rel="stylesheet" 
+	          th:href="@{/css/style.css}" 
+	          href="/css/style.css">
+    
+    <style>
+        .message-success { color: green; font-weight: bold; padding: 10px; border: 1px solid green; margin-bottom: 15px; }
+        .message-error { color: red; font-weight: bold; padding: 10px; border: 1px solid red; margin-bottom: 15px; }
+    </style>
+</head>
+<body th:data-user-role="${#authorization.expression('hasAuthority(''ADMIN'')') ? 'ADMIN' : 'USER'}">
+	
+	<div id="custom-tooltip" class="custom-tooltip"></div>
+	<div class="excel-container">
+	    
+	    <input type="radio" name="tabs" id="tab1" checked>
+	    <input type="radio" name="tabs" id="tab2">
+	    <input type="radio" name="tabs" id="tab3">
+
+	    <div class="tabs">
+	        <label for="tab1" class="tab-label">駐車場予約リスト</label>
+	        <label for="tab2" class="tab-label">来館者予約リスト</label>
+	        <label for="tab3" class="tab-label">送迎バス運行リスト</label>
+	        
+	        <form th:action="@{/logout}" method="post" class="logout-form">
+	            <button type="submit" class="logout-button">ログアウト</button>
+	        </form>
+	        <div class="tab-line"></div>
+	    </div>
+	    
+	    <div class="tab-contents">
+			<section id="content1" class="content">
+			    <h2>🚙 1駐車場予約リスト</h2>
+			    <p>CSVをアップロードして駐車場予約データをインポートできます。</p>
+                
+                <div th:if="${message}" th:class="${message.contains('成功') ? 'message-success' : 'message-error'}" th:text="${message}">
+                    アップロードメッセージ
+                </div>
+			    
+                <form th:action="@{/upload/parking}" method="post" enctype="multipart/form-data" class="csv-import-form">
+			        <input type="file" name="file" accept=".csv"><br>
+			        <button type="submit">駐車場予約CSVアップロード</button>
+			    </form>
+			    <hr>
+			    
+			    <div class="table-wrapper">
+			        <table class="excel-table">
+			            <thead>
+                            <tr>
+                                <th>駐車場予約リストID</th>
+                                </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="parking : ${parkings}" th:attr="data-parking-id=${parking.id}">
+                                </tr>
+                            <tr th:if="${#lists.isEmpty(parkings)}" class="no-data-row">
+                                <td colspan="13">登録されている駐車場予約データはありません</td>
+                            </tr>
+                        </tbody>
+			        </table>
+			    </div>
+			</section>
+            
+			<section id="content2" class="content">
+			    <h2>🏠 2来館者予約リスト</h2>
+			    <p>CSVをアップロードして来館者予約データをインポートできます。</p>
+
+                <form th:action="@{/upload/visit}" method="post" enctype="multipart/form-data" class="csv-import-form">
+			        <input type="file" name="file" accept=".csv"><br>
+			        <button type="submit">来館者予約CSVアップロード</button>
+			    </form>
+			    <hr>
+			    
+			    <div class="table-wrapper">
+			        <table class="excel-table">
+			            <thead>
+                            <tr>
+                                <th>来館者予約リストID</th>
+                                </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="visit : ${visits}" th:attr="data-visit-id=${visit.id}">
+                                </tr>
+                            <tr th:if="${#lists.isEmpty(visits)}" class="no-data-row">
+                                <td colspan="10">登録されている来館者予約データはありません</td>
+                            </tr>
+                        </tbody>
+			        </table>
+			    </div>
+			</section>
+            
+			<section id="content3" class="content">
+			    <h2>🚌 3送迎バス運行リスト</h2>
+			    <p>CSVをアップロードして送迎バス運行データをインポートできます。</p>
+
+                <form th:action="@{/upload/bus}" method="post" enctype="multipart/form-data" class="csv-import-form">
+			        <input type="file" name="file" accept=".csv"><br>
+			        <button type="submit">送迎バス運行CSVアップロード</button>
+			    </form>
+			    <hr>
+			    
+			    <div class="table-wrapper">
+			        <table class="excel-table">
+			            <thead>
+                            <tr>
+                                <th>送迎バス運行リストID</th>
+                                </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="bus : ${busReservations}">
+                                </tr>
+                            <tr th:if="${#lists.isEmpty(busReservations)}" class="no-data-row">
+                                <td colspan="13">登録されている送迎バス運行データはありません</td>
+                            </tr>
+                        </tbody>
+			        </table>
+			    </div>
+			</section>
+		</div>
+	</div>
+	<script th:src="@{/js/main.js}" src="/js/main.js"></script>
+</body>
+</html>
