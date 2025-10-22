@@ -1,5 +1,9 @@
 package com.example.demo.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,29 +13,77 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-// 💡 注意: このコントローラーでデータ処理を行う場合、
-// 必要なRepository（ParkingRepository, VisitRepository, BusRepositoryなど）を
-// @Autowired で注入する必要があります。
+import com.example.demo.model.Parking;
+import com.example.demo.model.ParkingStatus;
+import com.example.demo.model.ShuttleBusReservation;
+import com.example.demo.model.VisitSituation;
+import com.example.demo.model.Visitor;
+import com.example.demo.repository.ParkingRepository;
+import com.example.demo.repository.ParkingStatusRepository;
+import com.example.demo.repository.ShuttleBusReservationRepository;
+import com.example.demo.repository.VisitSituationRepository;
+import com.example.demo.repository.VisitorRepository;
+import com.example.demo.service.CsvService;
 
 @Controller
-@RequestMapping("/")
+@RequestMapping("/dataimport")
 public class DataImportController {
+
+    // データ取得に必要なリポジトリを定義
+    private final ParkingRepository parkingRepository;
+    private final ParkingStatusRepository parkingStatusRepository;
+    private final VisitorRepository visitRepository;
+    private final VisitSituationRepository visitSituationRepository;
+    private final ShuttleBusReservationRepository shuttleBusReservationRepository;
     
-    // 💡 修正点: 競合していた2つのGetMappingを統合。
-    // このメソッドがCSVインポートメニュー（/dataimport）を表示する役割を担います。
-    @GetMapping("/dataimport")
-    public String dataImportMenu(Model model) {
-        // TODO: 各タブで表示するデータをDBから取得してModelに追加します。
-        // 例：
-        // List<Parking> parkings = parkingRepository.findAll();
-        // model.addAttribute("parkings", parkings);
-        // model.addAttribute("visits", visitRepository.findAll());
-        // model.addAttribute("busReservations", busRepository.findAll());
+    // 💡 CsvImportService のインスタンスを注入
+    private final CsvService csvService;
+
+    @Autowired
+    public DataImportController(
+        ParkingRepository parkingRepository,
+        ParkingStatusRepository parkingStatusRepository,
+        VisitorRepository visitRepository,
+        VisitSituationRepository visitSituationRepository,
+        ShuttleBusReservationRepository shuttleBusReservationRepository,
+        CsvService csvImportService) { // 💡 コンストラクタにサービスを追加
         
-        // 戻り値はテンプレート名（例: "admin/dataimport" または "dataimport_menu_template"）
+        this.parkingRepository = parkingRepository;
+        this.parkingStatusRepository = parkingStatusRepository;
+        this.visitRepository = visitRepository;
+        this.visitSituationRepository = visitSituationRepository;
+        this.shuttleBusReservationRepository = shuttleBusReservationRepository;
+        this.csvService = csvImportService; // 💡 初期化
+    }
+
+    // CSVインポートメニュー表示用のGetMapping
+    @GetMapping // GET /dataimport にマッピング
+    public String dataImportMenu(Model model) {
+        
+        // 1. 駐車場予約リストとステータス (ID昇順でソート)
+        List<Parking> parkings = parkingRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        model.addAttribute("parkings", parkings);
+        List<ParkingStatus> parkingStatuses = parkingStatusRepository.findAll(Sort.by(Sort.Direction.ASC, "statusId"));
+        model.addAttribute("parkingStatuses", parkingStatuses);
+        
+        // 2. 来館者予約リストと状況
+        List<Visitor> visits = visitRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        model.addAttribute("visits", visits);
+        List<VisitSituation> visitSituations = visitSituationRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        model.addAttribute("visitSituations", visitSituations);
+        
+        // 3. 送迎バス運行リスト
+        List<ShuttleBusReservation> busReservations = shuttleBusReservationRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        model.addAttribute("busReservations", busReservations);
+        
+        // テンプレート名
         return "admin/dataimport"; 
     }
     
+    // ------------------------------------------------------------------------
+    // CSVアップロード処理 (POST)
+    // ------------------------------------------------------------------------
+
     // 駐車場予約リストの取り込み処理
     @PostMapping("/upload/parking")
     public String uploadParkingCsv(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
@@ -41,8 +93,9 @@ public class DataImportController {
         }
         
         try {
-            // TODO: CSV処理ロジックを実装し、Parkingエンティティとしてデータベースに保存します。
-            // 例: csvService.importParkingData(file);
+            // 🚨 修正適用: サービス層のメソッド呼び出しを有効化 🚨
+            csvService.importParkingData(file); 
+            
             ra.addFlashAttribute("message", "駐車場予約CSVの取り込みに成功しました。");
         } catch (Exception e) {
             e.printStackTrace();
@@ -60,8 +113,9 @@ public class DataImportController {
         }
 
         try {
-            // TODO: CSV処理ロジックを実装し、Visitエンティティとしてデータベースに保存します。
-            // 例: csvService.importVisitData(file);
+            // 🚨 修正適用: サービス層のメソッド呼び出しを有効化 🚨
+            csvService.importVisitData(file);
+            
             ra.addFlashAttribute("message", "来館者予約CSVの取り込みに成功しました。");
         } catch (Exception e) {
             e.printStackTrace();
@@ -79,8 +133,9 @@ public class DataImportController {
         }
 
         try {
-            // TODO: CSV処理ロジックを実装し、BusReservationエンティティとしてデータベースに保存します。
-            // 例: csvService.importBusData(file);
+            // 🚨 修正適用: サービス層のメソッド呼び出しを有効化 🚨
+        	csvService.importBusData(file);
+            
             ra.addFlashAttribute("message", "送迎バスCSVの取り込みに成功しました。");
         } catch (Exception e) {
             e.printStackTrace();
