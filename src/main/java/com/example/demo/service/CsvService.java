@@ -254,9 +254,9 @@ public class CsvService {
 	 }
 	 
 	// ------------------------------------------------------------------------
-	// 🚨 送迎バス予約CSVインポート処理 (修正済み) 🚨
+	// 🚨 送迎バス予約CSVインポート処理 (エラー解消 & 修正版) 🚨
 	// ------------------------------------------------------------------------
-    @Transactional 
+	@Transactional 
 	public void importBusData(MultipartFile file) throws Exception {
 	     CSVFormat format = CSVFormat.DEFAULT.builder()
 	         .setDelimiter(',')
@@ -267,7 +267,6 @@ public class CsvService {
 	     try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
 	          CSVParser csvParser = new CSVParser(reader, format)) {
 	         
-	         // 💡 型を ShuttleBusReservation に修正
 	         List<ShuttleBusReservation> busesToSave = new ArrayList<>();
 	         
 	         for (CSVRecord csvRecord : csvParser) {
@@ -278,81 +277,114 @@ public class CsvService {
 	                 continue; 
 	             } 
 	             
-	             // 💡 mapCsvToBusEntity の戻り値の型を ShuttleBusReservation に修正
-	             ShuttleBusReservation bus = mapCsvToBusEntity(csvRecord);
-	             busesToSave.add(bus);
+	             try {
+	                ShuttleBusReservation bus = mapCsvToBusEntity(csvRecord);
+	                busesToSave.add(bus);
+	             } catch (NumberFormatException e) {
+	                 // 💡 乗車人数のパースエラーを明確に捕捉
+	                 throw new RuntimeException("送迎バスCSVの処理に失敗しました。乗車人数に不正な値が含まれています。詳細: " + e.getMessage(), e);
+	             } catch (IllegalArgumentException e) {
+	                 // 💡 必須項目エラーを捕捉
+	                 throw new RuntimeException("送迎バスCSVの処理に失敗しました。必須項目が不足しています。詳細: " + e.getMessage(), e);
+	             }
 	         }
 
-	         // 💡 saveAllBuses の引数の型を ShuttleBusReservation に修正
 	         saveAllBuses(busesToSave);
 	     }
 	}
 
-	// 💡 mapCsvToBusEntity の戻り値の型を ShuttleBusReservation に修正
-	private ShuttleBusReservation mapCsvToBusEntity(CSVRecord record) {
-	    // 💡 初期化するオブジェクトの型を ShuttleBusReservation に修正
-	    ShuttleBusReservation bus = new ShuttleBusReservation();
+	// CsvService.java 内の mapCsvToBusEntity 関数全体を置き換えてください
 
-	    // 💡 1. visitReservationTime (DATETIME) - インデックス 1
+	private ShuttleBusReservation mapCsvToBusEntity(CSVRecord record) {
+	    ShuttleBusReservation bus = new ShuttleBusReservation();
+	    
+	    // ----------------------------------------------------------------------------------
+	    // 💡 1. visitReservationTime (DATETIME) - インデックス 1 (予約日時)
+	    // ----------------------------------------------------------------------------------
 	    String visitTimeStr = record.get(1).trim();
 	    if (!visitTimeStr.isEmpty()) {
+	        // DATETIME_FORMATTER = "yyyy/M/d H:mm" を使用
 	        bus.setVisitReservationTime(LocalDateTime.parse(visitTimeStr, DATETIME_FORMATTER));
 	    } else {
 	        throw new IllegalArgumentException("予約日時 (visit_reservation_time) は必須項目です。");
 	    }
 
-	    // 💡 2. busName - インデックス 2
-	    bus.setBusName(record.get(2).trim());
-
-	    // 💡 3. scheduled_dep_time (DATETIME) - インデックス 3
-	    String scheduledTimeStr = record.get(3).trim();
+	    // ----------------------------------------------------------------------------------
+	    // 💡 2. busName (運行会社名) - インデックス 2 に修正
+	    // ----------------------------------------------------------------------------------
+	    bus.setBusName(record.get(2).trim()); // 以前は record.get(3) だった
+	    
+	    // ----------------------------------------------------------------------------------
+	    // 💡 3. busDestination (行き先) - インデックス 3 に修正 (NOT NULL 対応)
+	    // ----------------------------------------------------------------------------------
+	    String destinationStr = record.get(3).trim(); // 以前は record.get(2) だった
+	    if (destinationStr.isEmpty()) {
+	        throw new IllegalArgumentException("行き先 (busDestination) は必須項目です。"); 
+	    }
+	    bus.setBusDestination(destinationStr);
+	    
+	    // ----------------------------------------------------------------------------------
+	    // 💡 4. scheduled_dep_time (DATETIME) - インデックス 4 と仮定 (定刻出発時間)
+	    // ----------------------------------------------------------------------------------
+	    String scheduledTimeStr = record.get(4).trim();
 	    if (!scheduledTimeStr.isEmpty()) {
 	        bus.setScheduledDepTime(LocalDateTime.parse(scheduledTimeStr, DATETIME_FORMATTER));
 	    } else {
 	         throw new IllegalArgumentException("定刻出発時間 (scheduled_dep_time) は必須項目です。");
 	    }
 
-	    // 💡 4. familyNames - インデックス 4
-	    bus.setFamilyNames(record.get(4).trim());
+	    // ----------------------------------------------------------------------------------
+	    // 💡 5. familyNames - インデックス 5
+	    // ----------------------------------------------------------------------------------
+	    bus.setFamilyNames(record.get(5).trim());
 
-	    // 💡 5. managerName - インデックス 5
-	    bus.setManagerName(record.get(5).trim());
+	    // ----------------------------------------------------------------------------------
+	    // 💡 6. managerName - インデックス 6
+	    // ----------------------------------------------------------------------------------
+	    bus.setManagerName(record.get(6).trim());
 
-	    // 💡 6. passengers (SMALLINT) - インデックス 6
-	    String passengersStr = record.get(6).trim();
-	    if (!passengersStr.isEmpty()) {
-	        // 💡 Setterが存在すると仮定
-	        bus.setPassengers(Short.parseShort(passengersStr));
+	    // ----------------------------------------------------------------------------------
+	    // 💡 7. passengers (乗車人数) - インデックス 7 と仮定 (空欄・"名" 修正済み)
+	    // ----------------------------------------------------------------------------------
+	    String passengersStr = record.get(7).trim();
+
+	    if (passengersStr.isEmpty()) {
+	        bus.setPassengers((short) 0); // 空欄の場合は 0名 として続行
 	    } else {
-	        throw new IllegalArgumentException("乗車人数 (passengers) は必須項目です。");
+	        String cleanPassengersStr = passengersStr.replace("名", "").trim();
+	        
+	        if (cleanPassengersStr.isEmpty()) {
+	            bus.setPassengers((short) 0);
+	        } else {
+	            bus.setPassengers(Short.parseShort(cleanPassengersStr)); 
+	        }
 	    }
+	    // ----------------------------------------------------------------------------------
 	    
-	    // 💡 7. busSituationsId (外部キー, NOT NULL)
-	    final String DEFAULT_STATUS_NAME = "予約中"; // 💡 "到着前"ではなく"予約中"に戻します
+	    // 💡 8. busSituations (外部キー) - CSVにIDが存在しないためデフォルト値を設定
+	    final String DEFAULT_STATUS_NAME = "到着前"; 
 	    Optional<BusSituation> defaultStatusOpt = busSituationRepository.findByName(DEFAULT_STATUS_NAME); 
 	    
-	    //if (defaultStatusOpt.isPresent()) {
-	    //    // 💡 Setterが存在すると仮定
-	    //    bus.setBusSituations(defaultStatusOpt.get()); 
-	    // } else {
-	    //    throw new RuntimeException("必須項目であるバス状況IDのデフォルト値 ('" + DEFAULT_STATUS_NAME + "') がDBに存在しません。マスタを確認してください。");
-	    //}
+	    if (defaultStatusOpt.isPresent()) {
+	        bus.setBusSituation(defaultStatusOpt.get()); 
+	    } else {
+	        throw new RuntimeException("必須項目であるバス状況IDのデフォルト値 ('" + DEFAULT_STATUS_NAME + "') がDBに存在しません。マスタを確認してください。");
+	    }
 
-        // 💡 8. remarksColumn - インデックス 11 (最後の空欄列を備考と仮定)
-        bus.setRemarksColumn(record.get(11).trim());
-        
-        // busDestination (インデックス 4 が空欄だったため、別途設定が必要な場合は修正)
-        // emptybus_dep_time, departure_time はCSVにないためNULLのまま
+	    // 💡 9. remarksColumn - インデックス 11 と仮定
+	    // CSVレコードの長さは少なくとも12（インデックス 11 まで）必要
+	    if (record.size() > 11) {
+	        bus.setRemarksColumn(record.get(11).trim());
+	    }
+	    
+	    // emptybus_dep_time, departure_time はCSVにないためNULL/DEFAULTのまま
 
 	    return bus;
 	}
 
-	// 💡 saveAllBuses の引数の型を ShuttleBusReservation に修正
 	private void saveAllBuses(List<ShuttleBusReservation> newBuses) {
-	    for (ShuttleBusReservation newBus : newBuses) { // 💡 変数型を ShuttleBusReservation に修正
+	    for (ShuttleBusReservation newBus : newBuses) { 
 	        
-	        // 複合キー（バス名＋予約日時）で既存レコードを検索
-	        // 💡 リポジトリの検索メソッドを呼び出すために、戻り値の型も ShuttleBusReservation に修正
 	        Optional<ShuttleBusReservation> existingOpt = shuttlebusReservationRepository
 	            .findByBusNameAndVisitReservationTime(
 	                newBus.getBusName(), 
@@ -360,9 +392,8 @@ public class CsvService {
 
 	        if (existingOpt.isPresent()) {
 	            // UPDATE処理
-	            ShuttleBusReservation existing = existingOpt.get(); // 💡 型を ShuttleBusReservation に修正
+	            ShuttleBusReservation existing = existingOpt.get(); 
 	            
-	            // ID以外のフィールドを新しいデータで上書き
 	            existing.setBusDestination(newBus.getBusDestination());
 	            existing.setEmptybusDepTime(newBus.getEmptybusDepTime());
 	            existing.setScheduledDepTime(newBus.getScheduledDepTime());
@@ -370,14 +401,12 @@ public class CsvService {
 	            existing.setFamilyNames(newBus.getFamilyNames());
 	            existing.setManagerName(newBus.getManagerName());
 	            existing.setPassengers(newBus.getPassengers());
-	            //existing.setBusSituations(newBus.getBusSituations());
+	            existing.setBusSituation(newBus.getBusSituation()); // 💡 復活
 	            existing.setRemarksColumn(newBus.getRemarksColumn());
 	            
-	            // 💡 リポジトリを使用して保存
 	            shuttlebusReservationRepository.save(existing);
 	        } else {
 	            // INSERT処理
-	            // 💡 リポジトリを使用して保存
 	            shuttlebusReservationRepository.save(newBus);
 	        }
 	    }

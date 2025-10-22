@@ -58,8 +58,16 @@ public class DataImportController {
 
     // CSVインポートメニュー表示用のGetMapping
     @GetMapping // GET /dataimport にマッピング
-    public String dataImportMenu(Model model) {
-        
+    public String dataImportMenu(
+    	    Model model, 
+    	    // ❌ 修正: パラメータ名が 'activeTab' で、必須ではない(required=false)かを確認
+    	    @RequestParam(value = "activeTab", required = false) String activeTab,
+    	    // 💡 追加: メッセージの送信先を識別するパラメータを受け取る
+    	    @RequestParam(value = "messageFor", required = false) String messageFor){
+    	
+    	System.out.println("Active Tab Parameter received: " + activeTab);
+    	model.addAttribute("activeTab", activeTab);
+    	
         // 1. 駐車場予約リストとステータス (ID昇順でソート)
         List<Parking> parkings = parkingRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
         model.addAttribute("parkings", parkings);
@@ -74,7 +82,12 @@ public class DataImportController {
         
         // 3. 送迎バス運行リスト
         List<ShuttleBusReservation> busReservations = shuttleBusReservationRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        
         model.addAttribute("busReservations", busReservations);
+        // 💡 追加: メッセージ送信先の識別子をモデルに追加
+        model.addAttribute("messageFor", messageFor);
+        
+        System.out.println("Active Tab Parameter received: " + activeTab);
         
         // テンプレート名
         return "admin/dataimport"; 
@@ -89,7 +102,7 @@ public class DataImportController {
     public String uploadParkingCsv(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
         if (file.isEmpty()) {
             ra.addFlashAttribute("message", "ファイルが選択されていません。");
-            return "redirect:/dataimport";
+            return "redirect:/dataimport?activeTab=bus";
         }
         
         try {
@@ -101,7 +114,7 @@ public class DataImportController {
             e.printStackTrace();
             ra.addFlashAttribute("message", "エラー: 駐車場予約CSVの処理に失敗しました。詳細: " + e.getMessage());
         }
-        return "redirect:/dataimport";
+        return "redirect:/dataimport?activeTab=parking&messageFor=parking";
     }
 
     // 来館者予約リストの取り込み処理
@@ -121,7 +134,7 @@ public class DataImportController {
             e.printStackTrace();
             ra.addFlashAttribute("message", "エラー: 来館者予約CSVの処理に失敗しました。詳細: " + e.getMessage());
         }
-        return "redirect:/dataimport";
+        return "redirect:/dataimport?activeTab=visit&messageFor=visit";
     }
 
     // 送迎バス運行リストの取り込み処理
@@ -129,18 +142,20 @@ public class DataImportController {
     public String uploadBusCsv(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
         if (file.isEmpty()) {
             ra.addFlashAttribute("message", "ファイルが選択されていません。");
-            return "redirect:/dataimport";
+            // 💡 修正: タブキープに加えて、メッセージの送信先を 'bus' に指定
+            return "redirect:/dataimport?activeTab=bus&messageFor=bus"; 
         }
 
         try {
-            // 🚨 修正適用: サービス層のメソッド呼び出しを有効化 🚨
-        	csvService.importBusData(file);
+            csvService.importBusData(file);
             
             ra.addFlashAttribute("message", "送迎バスCSVの取り込みに成功しました。");
         } catch (Exception e) {
             e.printStackTrace();
             ra.addFlashAttribute("message", "エラー: 送迎バスCSVの処理に失敗しました。詳細: " + e.getMessage());
         }
-        return "redirect:/dataimport";
+        
+        // 💡 修正: 成功・失敗に関わらず、タブキープとメッセージ送信先を指定
+        return "redirect:/dataimport?activeTab=bus&messageFor=bus"; 
     }
 }

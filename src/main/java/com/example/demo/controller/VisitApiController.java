@@ -108,12 +108,12 @@ public class VisitApiController {
                 
                 if (isExtraValueBlank) {
                     // JavaScriptから空文字が送られた場合、DBのdepartureTimeをNULLに設定
-                    visitor.compilationCmpTime(null);
+                    visitor.setCompilationCmpTime(null);
                 } else {
                     // JavaScriptから時刻文字列が送られた場合、LocalDateTimeにパースして設定
                     try {
                         LocalDateTime newCompilationCmpTime = LocalDateTime.parse(extraValueStr, DATETIME_FORMATTER);
-                        visitor.compilationCmpTime(newCompilationCmpTime);
+                        visitor.setCompilationCmpTime(newCompilationCmpTime);
                     } catch (java.time.format.DateTimeParseException e) {
                         System.err.println("日付パースエラー: " + extraValueStr);
                         // 致命的ではないがログに出力

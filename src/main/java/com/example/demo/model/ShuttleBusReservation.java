@@ -12,6 +12,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.UpdateTimestamp;
+
 @Entity
 @Table(name = "SHUTTLEBUS_RESERVATIONS") 
 public class ShuttleBusReservation {
@@ -96,7 +98,9 @@ public class ShuttleBusReservation {
     // DB側で自動更新される場合に適切ですが、Java側で明示的に値をセットしたい場合、
     // JPAではこの設定を削除するか、セッター定義だけで乗り切れるか環境依存になります。
     // 今回はセッターを追加することでJavaからのセットを試みます。
-    @Column(name = "update_time", nullable = false) 
+
+    @Column(name = "update_time", nullable = false)
+    @UpdateTimestamp
     private LocalDateTime updateTime;
 
     /**
