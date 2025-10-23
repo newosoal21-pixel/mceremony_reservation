@@ -41,7 +41,11 @@
 | **情報整形** | Javaアプリケーションに渡すために必要な情報リスト（送迎バス、駐車場、各種予約）に整形。 |
 | **CSV出力** | 整形したデータをCSV形式でアウトプット。 |
 
-![VBA操作画面のキャプチャ](screenshot/reserv_convert1.png)
+<br>
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
+    <img src="screenshot/reserv_convert.png" alt="csv取り込みVBA 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
 
 ### 2. Java（リアルタイム管理アプリケーション）
 
@@ -60,7 +64,7 @@
 
 現場での視認性と操作性を重視し、情報を3つの主要なカテゴリーに分けて表示します。
 
-##1.  **駐車場予約リスト**
+1.  **駐車場予約リスト**
     * 来館者名、車両ナンバー、予約時間、入庫/出庫ステータスを一覧表示。
 
 <div style="text-align: center; margin-bottom: 20px;">
@@ -72,6 +76,7 @@
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 2: モバイル表示画面】</p>
     <img src="screenshot/parking2.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
 </div>
+<br>
 
 2.  **来館者予約リスト**
     * 美容室利用者、打ち合わせ来館者をリスト化し、来館済ステータスを管理。
@@ -85,6 +90,7 @@
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 2: モバイル表示画面】</p>
     <img src="screenshot/visitor2.png" alt="来館者予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
 </div>
+<br>
 
 
 3.  **送迎バス運行リスト**
