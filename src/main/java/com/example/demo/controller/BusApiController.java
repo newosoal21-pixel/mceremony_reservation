@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException; // 新規追加
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,8 +31,7 @@ public class BusApiController {
     private final ShuttleBusReservationRepository shuttleBusReservationRepository;
     private final BusSituationRepository busSituationRepository;
     
-    // 💡 注意: 備考欄更新に直接は不要だが、他の更新ロジックのために残します。
-    // 使用されなくなった extraField/Value のパース用にも残しています。
+    // JS側 (common.js) の formatDate 関数と一致するフォーマットを定義
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
 
@@ -46,24 +46,21 @@ public class BusApiController {
      * 入出庫状況 (BusSituation) の全リストを返すAPIエンドポイント
      * @return List<BusSituation> 全状況のリスト
      */
-    @GetMapping("/situations") // 💡 新しいエンドポイント
+    @GetMapping("/situations")
     public ResponseEntity<List<BusSituation>> getAllBusSituations() {
-    	// 💡 【修正点】APIが呼び出されたことを確認するためのログを追加
     	System.out.println("--- API呼び出し: /api/bus/situations がリクエストされました ---");
-    	
-        // JpaRepository の findAll() メソッドを使用して全データを取得
+        
         List<BusSituation> situations = busSituationRepository.findAll();
         
-        // 💡 【修正点】取得したデータ数をログに出力して確認
         System.out.println("--- 取得された BusSituation の件数: " + situations.size() + " 件 ---");
         
-        // 成功レスポンスとしてリストを返す
         return ResponseEntity.ok(situations);
     }
     
     /**
-     * 送迎バス予約リストの各種フィールド（備考欄、入出庫状況など）を更新するAPIエンドポイント
-     * @param payload {id: '1', field: 'remarksColumn' or 'busSituation', value: '...' }
+     * 送迎バス予約リストの各種フィールド（備考欄、入出庫状況、乗車数）を更新するAPIエンドポイント
+     * @param payload {id: '1', field: 'remarksColumn' or 'busSituation' or 'passengers', value: '...' 
+     * [, extraField: 'emptybusDepTime' or 'departureTime', extraValue: 'yyyy/MM/dd HH:mm']}
      */
     @PostMapping("/update")
     @Transactional 
@@ -72,13 +69,14 @@ public class BusApiController {
     	System.out.println("API受信データ - ID: " + payload.get("id"));
         System.out.println("API受信データ - Field: " + payload.get("field"));
         System.out.println("API受信データ - Value: " + payload.get("value"));
+        System.out.println("API受信データ - ExtraField: " + payload.get("extraField"));
+        System.out.println("API受信データ - ExtraValue: " + payload.get("extraValue")); // デバッグ用
     	
         String idStr = payload.get("id");
         String field = payload.get("field");
         String valueStr = payload.get("value"); 
         
-        // 備考欄の更新では extraField/extraValue は使用しませんが、他の更新ロジックのために取得だけ残します。
-        // （ロジック自体は削除済み）
+        // 🚀 [修正1] extraField/Value の取得
         String extraField = payload.get("extraField"); 
         String extraValueStr = payload.get("extraValue");
         
@@ -86,17 +84,17 @@ public class BusApiController {
             return ResponseEntity.badRequest().body(Map.of("message", "必須データ（IDまたはフィールド名）が不足しています。"));
         }
         
+        // 更新日時を取得
+        LocalDateTime now = LocalDateTime.now();
+        
         try {
             Integer id = Integer.parseInt(idStr);
-            // 修正: 変数名を optionalBusReservation に変更
             Optional<ShuttleBusReservation> optionalBusReservation = shuttleBusReservationRepository.findById(id);
 
             if (optionalBusReservation.isEmpty()) {
-                // メッセージを ShuttlBusReservation に変更
                 return ResponseEntity.status(404).body(Map.of("message", "指定されたIDの送迎バス予約が見つかりません。"));
             }
 
-            // 修正: 変数名を shuttleBusReservation に変更
             ShuttleBusReservation shuttleBusReservation = optionalBusReservation.get();
             boolean isValueBlank = (valueStr == null || valueStr.trim().isEmpty());
             
@@ -115,28 +113,78 @@ public class BusApiController {
                 }
                 
                 BusSituation newStatus = optionalStatus.get();
-                // 修正: 変数名を shuttleBusReservation に変更
                 shuttleBusReservation.setBusSituation(newStatus);
                 
             } else if ("remarksColumn".equals(field)) {
                 // 備考欄 (String型) を更新
                 String valueToSet = isValueBlank ? null : valueStr.trim();
                 shuttleBusReservation.setRemarksColumn(valueToSet); 
+                
+            } else if ("passengers".equals(field)) { 
+                if (isValueBlank) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "乗車数は必須です。"));
+                }
+                
+                try {
+                    // 数値に変換してチェック
+                    Integer passengerCount = Integer.parseInt(valueStr.trim());
+                    
+                    if (passengerCount < 0) {
+                        return ResponseEntity.badRequest().body(Map.of("message", "乗車数に負の値を設定することはできません。"));
+                    }
+                    
+                    // Short型に変換してセット
+                    shuttleBusReservation.setPassengers(passengerCount.shortValue());
+                    
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "乗車数の値が数値として不正です。"));
+                }
             } else {
                 return ResponseEntity.badRequest().body(Map.of("message", "無効なフィールド名です。"));
             }
 
-            // --- 追加フィールドの更新処理は備考欄更新に不要なため削除 ---
-            
+            // -------------------------------------------------------------
+            // 🚀 [修正2] extraField (時刻記録) の更新処理
+            // -------------------------------------------------------------
+            if (extraField != null && extraValueStr != null && !extraValueStr.trim().isEmpty()) {
+                try {
+                    // 時刻文字列を LocalDateTime に変換
+                    LocalDateTime extraTime = LocalDateTime.parse(extraValueStr, DATETIME_FORMATTER);
+                    
+                    if ("emptybusDepTime".equals(extraField)) {
+                        System.out.println("---時刻格納: emptybusDepTime に " + extraValueStr + " をセット---");
+                        shuttleBusReservation.setEmptybusDepTime(extraTime);
+                        
+                    } else if ("departureTime".equals(extraField)) {
+                        System.out.println("---時刻格納: departureTime に " + extraValueStr + " をセット---");
+                        shuttleBusReservation.setDepartureTime(extraTime);
+                        
+                    } else {
+                        System.err.println("WARN: 未知の extraField: " + extraField + " は無視されました。");
+                    }
+                    
+                } catch (DateTimeParseException e) {
+                    System.err.println("ERROR: 日付時刻文字列のパースに失敗しました: " + extraValueStr);
+                    return ResponseEntity.badRequest().body(Map.of("message", "時刻データの形式が不正です。"));
+                }
+            }
+
+
             // 共通の更新日時をセット
-            // 💡 修正: モデルに setUpdateTime() を追加したため、ここでコンパイルが通ります
-            shuttleBusReservation.setUpdateTime(LocalDateTime.now());
+            shuttleBusReservation.setUpdateTime(now);
             
             // データベースに保存（更新）
-            // 修正: 変数名を shuttleBusReservation に変更
             shuttleBusReservationRepository.save(shuttleBusReservation);
             
-            return ResponseEntity.ok(Map.of("status", "success", "message", "更新が完了しました。"));
+            // 💡 修正: クライアント側で最終更新時刻の表示を更新できるよう、時刻文字列を返す
+            // サーバー側でフォーマットした時刻を返すことで、クライアント側はより正確な時刻を取得できる
+            String updateTimeStr = now.format(DATETIME_FORMATTER);
+            
+            return ResponseEntity.ok(Map.of(
+                "status", "success", 
+                "message", "更新が完了しました。",
+                "updateTime", updateTimeStr
+            ));
             
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body(Map.of("message", "IDまたは更新値の形式が不正です。"));

@@ -216,11 +216,16 @@ h2 {
 /* 特定の列のテキスト配置 */
 .excel-table th:nth-child(1), .excel-table td:nth-child(1) { text-align: center; width: 4%; } /* 整理番号をさらに狭く */
 .excel-table th:nth-child(2), .excel-table td:nth-child(2) { font-size: 12px; } /* 日時をさらに小さく */
-.excel-table th:nth-child(7), .excel-table td:nth-child(7) { text-align: center; } 
 .excel-table th:nth-child(9), .excel-table td:nth-child(9) { text-align: right; width: 4%; } 
 .excel-table th:nth-child(10), .excel-table td:nth-child(10) { text-align: right; width: 4%; } 
 .excel-table th:nth-child(11), .excel-table td:nth-child(11) { text-align: right; width: 4%; }
 .excel-table th:nth-child(13), .excel-table td:nth-child(13) { font-size: 12px; } /* 日時をさらに小さく */
+
+/* 🚀 [追加] 時刻表示のセル（5列目と7列目）を中央揃えで統一 */
+.excel-table th:nth-child(5), .excel-table td:nth-child(5), /* 下車済バス出庫時刻 */
+.excel-table th:nth-child(7), .excel-table td:nth-child(7) { /* 乗車済バス出庫時刻 */
+    text-align: left; 
+}
 
 /* -------------------------------------------------------------------------------------- */
 /* 💡 【PC表示】編集モードの表示/非表示制御 (is-editingクラスによる修正) */

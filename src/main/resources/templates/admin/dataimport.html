@@ -278,8 +278,41 @@
 					                <td data-label="乗車済バス出庫時刻" class="group-2-col" th:text="${bus.departureTime != null ? #temporals.format(bus.departureTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 					                <td data-label="手配両家名" class="group-2-col" th:text="${bus.familyNames}"></td>
 					                <td data-label="担当" class="group-2-col" th:text="${bus.managerName}"></td>
-					                <td data-label="乗車数" class="group-2-col" th:text="${bus.passengers} + '名'"></td>
-					                <td data-label="入出庫状況" class="js-bus-status group-2-col" th:text="${bus.busSituation.name}" th:data-value="${bus.busSituation.name}"></td>
+									<td data-label="乗車数" class="js-passengers-field group-2-col" th:data-record-id="${bus.id}">
+									    <span class="passengers-text" th:text="${bus.passengers} + '名'" th:data-original-value="${bus.passengers}"></span>
+									    
+									    <form class="passengers-edit-form" style="display: none; visibility: hidden;">
+									        <input type="number" 
+									               th:value="${bus.passengers}" 
+									               class="passengers-input js-input-value" 
+									               min="0" 
+									               pattern="[0-9]*"
+									               style="width: 60px;">
+									        <button type="button" class="update-passengers-button js-update-passengers-button">更新</button> 
+									        <button type="button" class="cancel-passengers-button js-cancel-passengers-button">取消</button>
+									    </form>
+									</td>
+									<td data-label="入出庫状況" 
+									    class="js-bus-status group-2-col" 
+									    th:attr="data-status-id=${bus.busSituation.id}, data-status-name=${bus.busSituation.name}, data-record-id=${bus.id}">
+									    
+									    <span class="view-mode-text status-red-bold" th:text="${bus.busSituation.name}"></span>
+									    
+									    <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+									        <select class="form-select form-select-sm situation-select js-bus-situation-select">
+									            <option th:each="status : ${busSituations}" 
+									                    th:value="${status.id}"  
+									                    th:text="${status.name}"
+									                    th:selected="${status.id == bus.busSituation.id}"></option>
+									        </select>
+									        
+									        <button class="btn btn-primary btn-sm js-update-button-bus" 
+									                data-field-name="busSituation" 
+									                style="margin-left: 5px;">更新</button> 
+									                
+									        <button class="btn btn-secondary btn-sm js-cancel-button-bus">取消</button>
+									    </div>
+									</td>
 					                
 					                <td data-label="更新日時" class="group-2-col js-update-time-field" th:text="${bus.updateTime != null ? #temporals.format(bus.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 					                
