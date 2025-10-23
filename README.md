@@ -66,7 +66,7 @@
 
 1.  **駐車場予約リスト**
     * 来館者名、車両ナンバー、予約時間、入庫/出庫ステータスを一覧表示。
-
+<br>
 <div style="text-align: center; margin-bottom: 20px;">
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
     <img src="screenshot/parking1.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
@@ -95,7 +95,7 @@
 
 3.  **送迎バス運行リスト**
     * 運行ルート、到着/出発時刻、現在のステータス（運行中、到着済など）を管理。
-
+<br>
 <div style="text-align: center; margin-bottom: 20px;">
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
     <img src="screenshot/bus1.png" alt="送迎バス運行リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
