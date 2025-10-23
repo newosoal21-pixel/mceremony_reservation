@@ -65,7 +65,8 @@
 
 PC表示画面
 ![駐車場予約リスト画面のキャプチャ](screenshot/parking1.png)
-<br>
+
+
 モバイル表示画面
 ![駐車場予約リスト画面のキャプチャ](screenshot/parking2.png)
 
