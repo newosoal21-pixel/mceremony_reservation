@@ -67,6 +67,7 @@
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
     <img src="screenshot/parking1.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
 </div>
+<br>
 <div style="text-align: center; margin-bottom: 20px;">
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 2: モバイル表示画面】</p>
     <img src="screenshot/parking2.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
@@ -75,20 +76,30 @@
 2.  **来館者予約リスト**
     * 美容室利用者、打ち合わせ来館者をリスト化し、来館済ステータスを管理。
 
-PC表示画面
-![来館者予約リスト画面のキャプチャ](screenshot/visitor1.png)
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
+    <img src="screenshot/visitor1.png" alt="来館者予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
+<br>
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 2: モバイル表示画面】</p>
+    <img src="screenshot/visitor2.png" alt="来館者予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
 
-モバイル表示画面
-![来館者予約リスト画面のキャプチャ](screenshot/visitor2.png)
 
 3.  **送迎バス運行リスト**
     * 運行ルート、到着/出発時刻、現在のステータス（運行中、到着済など）を管理。
 
-PC表示画面
-![バス運行リスト画面のキャプチャ](screenshot/bus1.png)
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
+    <img src="screenshot/bus1.png" alt="送迎バス運行リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
+<br>
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 2: モバイル表示画面】</p>
+    <img src="screenshot/bus2.png" alt="送迎バス運行リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
 
-モバイル表示画面
-![バス運行リスト画面のキャプチャ](screenshot/bus2.png)
 
 ---
 
