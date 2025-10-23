@@ -67,11 +67,10 @@
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
     <img src="screenshot/parking1.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
 </div>
-
-
-モバイル表示画面
-![駐車場予約リスト画面のキャプチャ](screenshot/parking2.png)
-
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 2: モバイル表示画面】</p>
+    <img src="screenshot/parking2.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
 
 2.  **来館者予約リスト**
     * 美容室利用者、打ち合わせ来館者をリスト化し、来館済ステータスを管理。
