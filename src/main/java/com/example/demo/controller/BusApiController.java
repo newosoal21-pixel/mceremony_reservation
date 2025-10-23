@@ -1,7 +1,8 @@
 package com.example.demo.controller;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter; 
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -10,6 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,6 +42,25 @@ public class BusApiController {
         this.busSituationRepository = busSituationRepository;
     }
 
+    /**
+     * 入出庫状況 (BusSituation) の全リストを返すAPIエンドポイント
+     * @return List<BusSituation> 全状況のリスト
+     */
+    @GetMapping("/situations") // 💡 新しいエンドポイント
+    public ResponseEntity<List<BusSituation>> getAllBusSituations() {
+    	// 💡 【修正点】APIが呼び出されたことを確認するためのログを追加
+    	System.out.println("--- API呼び出し: /api/bus/situations がリクエストされました ---");
+    	
+        // JpaRepository の findAll() メソッドを使用して全データを取得
+        List<BusSituation> situations = busSituationRepository.findAll();
+        
+        // 💡 【修正点】取得したデータ数をログに出力して確認
+        System.out.println("--- 取得された BusSituation の件数: " + situations.size() + " 件 ---");
+        
+        // 成功レスポンスとしてリストを返す
+        return ResponseEntity.ok(situations);
+    }
+    
     /**
      * 送迎バス予約リストの各種フィールド（備考欄、入出庫状況など）を更新するAPIエンドポイント
      * @param payload {id: '1', field: 'remarksColumn' or 'busSituation', value: '...' }

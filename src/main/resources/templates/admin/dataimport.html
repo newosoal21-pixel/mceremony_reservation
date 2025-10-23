@@ -125,7 +125,7 @@
 				                    <span class="remarks-text" th:text="${parking.remarksColumn}"></span>
 				                    <form class="remarks-edit-form" style="display: none; visibility: hidden;">
 				                        <textarea class="remarks-textarea" th:data-original-value="${parking.remarksColumn}" th:text="${parking.remarksColumn}"></textarea>
-				                        <button type="submit" class="update-remarks-button">更新</button>
+				                        <button type="submit" class="update-remarks-button">更新</button> 
 				                        <button type="button" class="cancel-remarks-button">取消</button>
 				                    </form>
 				                </td>
@@ -300,7 +300,44 @@
 					</div>
 	</div>
 		
-	<script th:src="@{/js/main.js}" src="/js/main.js"></script>
+	<script th:src="@{/js/common.js}" src="/js/common.js"></script>
+	<script th:src="@{/js/parking.js}" src="/js/parking.js"></script>
+	<script th:src="@{/js/visitor.js}" src="/js/visitor.js"></script>
+	<script th:src="@{/js/bus.js}" src="/js/bus.js"></script>
 	
-</body>
+	<script>
+	document.addEventListener('DOMContentLoaded', function() {
+	    // 1. URLからクエリパラメータを取得
+	    const urlParams = new URLSearchParams(window.location.search);
+	    const activeTabId = urlParams.get('activeTab'); // 例: 'tab2' を取得
+
+	    if (activeTabId) {
+	        // 2. 現在の checked 状態をリセットし、指定されたIDのラジオボタンを checked にする
+	        // ※ CSSの仕様により、デフォルトで checked のものも含め、一度リセットして再チェックするのが確実です
+	        
+	        // 全てのラジオボタンのチェックを外す
+	        document.querySelectorAll('input[name="tabs"]').forEach(radio => {
+	            radio.checked = false;
+	        });
+	        
+	        // URLパラメータで指定されたタブをチェックする
+	        const targetTab = document.getElementById(activeTabId);
+	        if (targetTab) {
+	            targetTab.checked = true;
+	        }
+	        
+	        // 【補足】サーバー側のリダイレクト処理（Java/Spring Bootなど）で、
+	        // CSVアップロード成功時に以下の形式でリダイレクトするように実装してください。
+	        // ・駐車場予約 (content1) -> redirect:/dataimport?activeTab=tab1
+	        // ・来館者予約 (content2) -> redirect:/dataimport?activeTab=tab2
+	        // ・送迎バス運行 (content3) -> redirect:/dataimport?activeTab=tab3
+	    }
+	    
+	    // URLからクエリパラメータを削除して、画面をクリーンに保ちたい場合は、以下の行を有効にしてください。（任意）
+	    // if (activeTabId) {
+	    //     history.replaceState(null, '', window.location.pathname);
+	    // }
+	});
+	</script>
+	</body>
 </html>

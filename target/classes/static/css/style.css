@@ -37,7 +37,7 @@
     border-top-right-radius: 5px;
     margin-right: 2px;
     z-index: 1; 
-    font-size: 14px;
+    font-size: 1.4rem;
     color: #333;
     transition: background-color 0.2s;
     /* ラベル自体も下揃えになるように調整 */
@@ -222,8 +222,13 @@ h2 {
 .excel-table th:nth-child(11), .excel-table td:nth-child(11) { text-align: right; width: 4%; }
 .excel-table th:nth-child(13), .excel-table td:nth-child(13) { font-size: 12px; } /* 日時をさらに小さく */
 
+/* -------------------------------------------------------------------------------------- */
+/* 💡 【PC表示】編集モードの表示/非表示制御 (is-editingクラスによる修正) */
+/* -------------------------------------------------------------------------------------- */
+
 /* --- 編集モードのコンテナ (PC: 絶対配置でドロップダウン) --- */
 .edit-mode {
+    /* JSで display: block を制御するため、display: none が必要に応じて追加される */
     display: block; 
     position: absolute;
     top: 100%;
@@ -234,7 +239,6 @@ h2 {
     padding: 5px;
     white-space: nowrap;
     
-    /* JS側で display: flex を設定するため、flexboxの縦並びスタイルをCSS側で定義 */
     display: flex; 
     flex-direction: column;
     
@@ -256,15 +260,44 @@ h2 {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
     white-space: nowrap;
     
-    /* JS側で display: flex を設定するため、flexboxの縦並びスタイルをCSS側で定義 */
     display: flex; 
     flex-direction: column;
     
     width: auto;
     max-width: 100%;
-    min-width: 0; 
+    min-width: 150px; 
     box-sizing: border-box;
+    width: 100%; 
 }
+
+/* 🔴 PC表示の切り替えロジック (取消ボタン動作の修正) - #content3 に限定 */
+/* 1. デフォルト (非編集モード): 編集モードを非表示にする */
+#content3 .excel-table td:not(.is-editing) .edit-mode-select {
+    display: none !important;
+}
+
+/* 2. 編集モード時: 編集モードを表示する */
+#content3 .excel-table td.is-editing .edit-mode-select {
+    display: flex !important; /* JSによる表示を強制 */
+    position: absolute !important; /* 絶対配置を強制 */
+    top: 100% !important; 
+    left: 0 !important;
+    z-index: 10 !important; 
+    
+    /* その他、既存のPCスタイルを再適用 */
+    background: #f8f9fa; 
+    border: 1px solid #ccc; 
+    padding: 5px; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    flex-direction: column;
+    width: 100%;
+}
+
+/* 3. 重なり対策: 編集モード時は元の表示テキストを非表示にする */
+#content3 .excel-table td.is-editing .view-mode-text {
+    display: none !important;
+}
+
 
 /* 備考欄の編集フォームのスタイル (右寄せ展開を強制) */
 .remarks-edit-form {
@@ -276,14 +309,13 @@ h2 {
     padding: 5px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
     
-    /* JS側で display: flex を設定するため、flexboxの縦並びスタイルをCSS側で定義 */
     display: flex;
     flex-direction: column; 
     
-    width: 300px !important; /* 幅を固定して計算を容易にする */
+    width: 300px !important; 
 
     right: auto !important;
-    left: calc(100% - 300px) !important; /* 親要素の幅からフォームの幅を引いた値に左端を設定 */
+    left: calc(100% - 300px) !important; 
 
     box-sizing: border-box;
 }
@@ -301,7 +333,7 @@ h2 {
     margin: 0;
 }
 
-/* 更新ボタンのスタイル (元のセレクタ) */
+/* 更新ボタンのスタイル (元のセレクタ - JSで生成される場合) */
 .update-button { 
     display: block; 
     margin-top: 5px; 
@@ -311,21 +343,30 @@ h2 {
     text-align: center;
 }
 
-/* 編集モード内のボタンのスタイル (縦並びを維持) */
+/* ----------------------------------------------------
+   [修正] 編集モード内のボタンのスタイル (縦並びを強制)
+   ---------------------------------------------------- */
 .edit-mode button,
 .edit-mode-select button,
 .remarks-edit-form button {
+    /* 💡 width: 100% を維持しつつ、Flexboxで縦並びを強制 */
     width: 100%; 
     float: none; /* floatを解除 */
-    margin-left: 0; 
-    margin-right: 0;
-    margin-top: 5px; 
+    
+    /* 縦並びのため横マージンをリセット */
+    margin-left: 0 !important; 
+    margin-right: 0 !important;
+    
+    /* 💡 縦の隙間を確保 */
+    margin-top: 5px !important; 
     
     font-size: 11px;
     padding: 2px 5px;
     cursor: pointer;
     box-sizing: border-box;
     text-align: center;
+    
+    display: block; 
 }
 
 /* ========================================================== */
@@ -338,7 +379,7 @@ h2 {
 }
 
 /* 車両ナンバーのフォームの絶対配置と見た目 (縦並びを強制) */
-.excel-table td .vehicle-number-form {
+.excel-table td .vehicle-number-edit-form { /* 💡 formクラス名を修正 */
     position: absolute;
     top: 100%;
     left: 0;
@@ -352,7 +393,6 @@ h2 {
     min-width: 200px;
     box-sizing: border-box;
 
-    /* JS側で display: block を設定するため、ブロック要素として縦並びを強制 */
     display: block !important; 
     white-space: normal; 
 }
@@ -371,7 +411,7 @@ h2 {
 }
 
 /* 車両ナンバーのボタン（更新・取消）のスタイル */
-.excel-table td .vehicle-number-form button {
+.excel-table td .vehicle-number-edit-form button {
     width: 100% !important; 
     display: block !important; 
     float: none !important; 
@@ -476,12 +516,11 @@ h2 {
         padding: 5px;
         background-color: transparent; 
         
-        /* 🔴 最終対策: はみ出しを許可して描画バグを防ぐ */
+        /* 🔴 レイアウト伸び解消のため、高さ制約を緩和 */
         overflow: visible !important; 
-        
-        /* 行全体が内容の高さまで拡張されるように強制 (埋没防止) */
         height: auto !important; 
-        min-height: fit-content !important; 
+        min-height: 0 !important; /* 最小高さをリセット */
+        align-items: flex-start; /* tdを上寄せに揃える */
     }
     
     /* ------------------------------------------- */
@@ -516,53 +555,42 @@ h2 {
     /* ------------------------------------------- */
     
 	/* 2. すべてのセル(td)の基本スタイル - Flexアイテムとして制御 */
-	    .excel-table td {
-	        display: block; 
-	        flex-grow: 0;
-	        flex-shrink: 0;
-	        flex-basis: calc(50% - 2px); 
-	        margin: 1px; 
-	        border: 1px solid #eee; 
-	        box-sizing: border-box; 
-	        padding: 5px; 
-	        
-            /* ★修正: 他のセルのmin-heightを緩和し、内容ベースの高さも許容 (維持) */
-	        min-height: auto; 
-	        
-	        font-size: 14px;
-	        line-height: 1.4;
-	        background-color: transparent !important; 
-	        position: relative; 
-            
-            /* 他のセルはデフォルトの Flexアイテムの揃えに戻す (維持) */
-            align-self: flex-start; 
-	    }
+	.excel-table td {
+        display: block; 
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: calc(50% - 2px); 
+        margin: 1px; 
+        border: 1px solid #eee; 
+        box-sizing: border-box; 
+        padding: 5px; 
         
-        /* 編集モード展開時に非編集テキストを非表示にする (維持) */
-        .excel-table td.js-parking-status.is-editing .situation-text {
-            display: none !important;
-        }
+        /* 💡 【最終修正 1-A】すべての td の高さをコンテンツに制限する */
+        align-self: flex-start !important; 
+        min-height: auto !important; 
+        height: auto !important;
+        
+        font-size: 14px;
+        line-height: 1.4;
+        background-color: transparent !important; 
+        position: relative; 
+	}
+        
+    /* 💡 編集モード時に表示テキストを非表示にする制御 (JS連携) - #content3 に限定 */
+    #content3 .excel-table td.is-editing .situation-text,
+    #content3 .excel-table td.js-bus-status.is-editing .view-mode-text {
+        display: none !important;
+    }
 
-	    /* 🔴 利用状況欄のセル (高さ計算とz-indexの起点) */
-	    .excel-table td.js-parking-status {
-	        /* 既存の修正を維持し、高さ自動拡張を強制 */
-	        height: auto !important; 
-	        min-height: fit-content !important; /* セルサイズを内容物に依存させる */
-            
-	        overflow: visible !important; 
-	        
-	        /* 利用状況セルのみ自律的な高さ拡張を強制 */
-	        align-self: flex-start !important; 
-            
-            /* min-heightは削除（維持） */
-            min-height: auto !important; 
-            
-            /* パディングは最低限に緩和 (維持) */
-            padding-bottom: 5px !important; 
-            
-            /* 🔴 Stacking Contextを強制（潜り込み対策） */
-            position: relative !important; 
-	    }
+	/* 🔴 利用状況欄のセル (高さ計算とz-indexの起点) */
+	.excel-table td.js-parking-status,
+    .excel-table td.js-visit-situation,
+    .excel-table td.js-bus-status { /* 💡 bus-statusを追加 */
+        /* 上の td スタイルで height: auto; align-self: flex-start; を強制 */
+        overflow: visible !important; 
+        padding-bottom: 5px !important; 
+        position: relative !important; 
+	}
     
     /* 🔴 100%幅にしたいセル（備考欄） */
     .excel-table td.js-remarks-field,
@@ -658,37 +686,49 @@ h2 {
     .excel-table td::after {
         content: none !important;
     }
+
+    /* ----------------------------------------------------
+       [最終修正 2] is-editing クラスによる編集モードの表示/非表示制御 - #content3 に限定
+       ---------------------------------------------------- */
+
+    /* 💡 デフォルト状態: is-editing クラスがない td 内の編集モードは完全に非表示 */
+    #content3 .excel-table td:not(.is-editing) .edit-mode-select {
+        display: none !important;
+    }
     
-    /* 🔴 編集モードのスタイル調整（モバイルではセル内に収める） */
+    /* 💡 編集モード時: is-editing クラスがある td 内の編集モードを表示 */
+    #content3 .excel-table td.is-editing .edit-mode-select {
+        display: flex !important; 
+        flex-direction: column !important;
+        
+        /* レイアウトの調整 */
+        position: static !important; /* モバイルでは static を強制 */
+        width: 100% !important;
+        min-width: auto !important;
+        padding: 5px !important;
+        margin-bottom: 5px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        
+        /* 潜り込み対策の z-index は維持 */
+        z-index: 1000 !important; 
+    }
+
+    /* ----------------------------------------------------
+       [その他の編集フォームのモバイル対応]
+       ---------------------------------------------------- */
     .excel-table .edit-mode,
-    .excel-table .edit-mode-select,
     .excel-table .remarks-edit-form,
-    .excel-table td .vehicle-number-form { 
+    .excel-table td .vehicle-number-edit-form { 
         position: static; 
         display: block; 
         width: 100%;
         min-width: auto;
     }
-    
-	/* 🔴 編集モードコンテナ (見切れと潜り込みの主犯/主対象) */
-	.excel-table .edit-mode-select {
-        padding: 0 !important; 
-        border: none !important;
-        box-shadow: none !important;
-        background: transparent !important;
-        box-sizing: border-box; 
-        height: auto !important; 
-        min-height: fit-content !important;
-        
-        /* 🔴 最終対策: セルを確実に押し広げるためのマージンをさらに増加 */
-        margin-bottom: 60px !important; 
-        
-        /* 🔴 Stacking Contextを強制（潜り込み対策） */
-        z-index: 1000 !important; 
-    }
 
     /* 車両ナンバーのフォームの調整 (維持) */
-    .excel-table td .vehicle-number-form {
+    .excel-table td .vehicle-number-edit-form { 
         display: block !important; 
         width: 100%;
         padding: 0 !important;

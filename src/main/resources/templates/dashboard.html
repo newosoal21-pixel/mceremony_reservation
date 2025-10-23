@@ -257,7 +257,27 @@
 							                            <td data-label="手配両家名" class="group-2-col" th:text="${bus.familyNames}"></td>
 							                            <td data-label="担当" class="group-2-col" th:text="${bus.managerName}"></td>
 							                            <td data-label="乗車数" class="group-2-col" th:text="${bus.passengers} + '名'"></td>
-							                            <td data-label="入出庫状況" class="js-bus-status group-2-col" th:text="${bus.busSituation.name}" th:data-value="${bus.busSituation.name}"></td>
+														<td data-label="入出庫状況" 
+														    class="js-bus-status group-2-col" 
+														    th:attr="data-status-id=${bus.busSituation.id}, data-status-name=${bus.busSituation.name}, data-record-id=${bus.id}">
+														    
+														    <span class="view-mode-text status-red-bold" th:text="${bus.busSituation.name}"></span>
+														    
+														    <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+														        <select class="form-select form-select-sm situation-select js-bus-situation-select">
+														            <option th:each="status : ${busSituations}" 
+														                    th:value="${status.id}"  
+														                    th:text="${status.name}"
+														                    th:selected="${status.id == bus.busSituation.id}"></option>
+														        </select>
+														        
+														        <button class="btn btn-primary btn-sm js-update-button-bus" 
+														                data-field-name="busSituation" 
+														                style="margin-left: 5px;">更新</button> 
+														                
+														        <button class="btn btn-secondary btn-sm js-cancel-button-bus">取消</button>
+														    </div>
+														</td>
 							                            
 							                            <td data-label="更新日時" class="group-2-col js-update-time-field" th:text="${bus.updateTime != null ? #temporals.format(bus.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 							                            
@@ -279,6 +299,9 @@
 							        </section>
 		</div>
 	</div>
-	<script th:src="@{/js/main.js}" src="/js/main.js"></script>
+	<script th:src="@{/js/common.js}" src="/js/common.js"></script>
+	<script th:src="@{/js/parking.js}" src="/js/parking.js"></script>
+	<script th:src="@{/js/visitor.js}" src="/js/visitor.js"></script>
+	<script th:src="@{/js/bus.js}" src="/js/bus.js"></script>
 </body>
 </html>

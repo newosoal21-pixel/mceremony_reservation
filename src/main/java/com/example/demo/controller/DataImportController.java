@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.example.demo.model.BusSituation; // 💡 追加
 import com.example.demo.model.Parking;
 import com.example.demo.model.ParkingStatus;
 import com.example.demo.model.ShuttleBusReservation;
 import com.example.demo.model.VisitSituation;
 import com.example.demo.model.Visitor;
+import com.example.demo.repository.BusSituationRepository; // 💡 追加
 import com.example.demo.repository.ParkingRepository;
 import com.example.demo.repository.ParkingStatusRepository;
 import com.example.demo.repository.ShuttleBusReservationRepository;
@@ -35,8 +37,9 @@ public class DataImportController {
     private final VisitorRepository visitRepository;
     private final VisitSituationRepository visitSituationRepository;
     private final ShuttleBusReservationRepository shuttleBusReservationRepository;
+    private final BusSituationRepository busSituationRepository; // 💡 追加: BusSituationRepository
     
-    // 💡 CsvImportService のインスタンスを注入
+    // CsvImportService のインスタンスを注入
     private final CsvService csvService;
 
     @Autowired
@@ -46,23 +49,23 @@ public class DataImportController {
         VisitorRepository visitRepository,
         VisitSituationRepository visitSituationRepository,
         ShuttleBusReservationRepository shuttleBusReservationRepository,
-        CsvService csvImportService) { // 💡 コンストラクタにサービスを追加
+        BusSituationRepository busSituationRepository, // 💡 追加: BusSituationRepositoryをコンストラクタに追加
+        CsvService csvImportService) {
         
         this.parkingRepository = parkingRepository;
         this.parkingStatusRepository = parkingStatusRepository;
         this.visitRepository = visitRepository;
         this.visitSituationRepository = visitSituationRepository;
         this.shuttleBusReservationRepository = shuttleBusReservationRepository;
-        this.csvService = csvImportService; // 💡 初期化
+        this.busSituationRepository = busSituationRepository; // 💡 初期化
+        this.csvService = csvImportService;
     }
 
     // CSVインポートメニュー表示用のGetMapping
     @GetMapping // GET /dataimport にマッピング
     public String dataImportMenu(
     	    Model model, 
-    	    // ❌ 修正: パラメータ名が 'activeTab' で、必須ではない(required=false)かを確認
     	    @RequestParam(value = "activeTab", required = false) String activeTab,
-    	    // 💡 追加: メッセージの送信先を識別するパラメータを受け取る
     	    @RequestParam(value = "messageFor", required = false) String messageFor){
     	
     	System.out.println("Active Tab Parameter received: " + activeTab);
@@ -82,9 +85,13 @@ public class DataImportController {
         
         // 3. 送迎バス運行リスト
         List<ShuttleBusReservation> busReservations = shuttleBusReservationRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
-        
         model.addAttribute("busReservations", busReservations);
-        // 💡 追加: メッセージ送信先の識別子をモデルに追加
+
+        // 💡 追加: 入出庫状況マスタデータを取得し、モデルに追加
+        List<BusSituation> busSituations = busSituationRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        model.addAttribute("busSituations", busSituations); 
+        
+        // メッセージ送信先の識別子をモデルに追加
         model.addAttribute("messageFor", messageFor);
         
         System.out.println("Active Tab Parameter received: " + activeTab);
@@ -100,13 +107,16 @@ public class DataImportController {
     // 駐車場予約リストの取り込み処理
     @PostMapping("/upload/parking")
     public String uploadParkingCsv(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
+        // CSVアップロードフォームが tab1 にあるため、タブキープ先は tab1
+        final String TAB_ID = "tab1"; 
+        
         if (file.isEmpty()) {
             ra.addFlashAttribute("message", "ファイルが選択されていません。");
-            return "redirect:/dataimport?activeTab=bus";
+            // ファイルが空の場合も、タブを維持してリダイレクト
+            return "redirect:/dataimport?activeTab=" + TAB_ID;
         }
         
         try {
-            // 🚨 修正適用: サービス層のメソッド呼び出しを有効化 🚨
             csvService.importParkingData(file); 
             
             ra.addFlashAttribute("message", "駐車場予約CSVの取り込みに成功しました。");
@@ -114,19 +124,23 @@ public class DataImportController {
             e.printStackTrace();
             ra.addFlashAttribute("message", "エラー: 駐車場予約CSVの処理に失敗しました。詳細: " + e.getMessage());
         }
-        return "redirect:/dataimport?activeTab=parking&messageFor=parking";
+        // 成功/失敗に関わらず、tab1 をアクティブにし、メッセージを parking タブ向けに指定
+        return "redirect:/dataimport?activeTab=" + TAB_ID + "&messageFor=parking";
     }
 
     // 来館者予約リストの取り込み処理
     @PostMapping("/upload/visit")
     public String uploadVisitCsv(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
+        // CSVアップロードフォームが tab2 にあるため、タブキープ先は tab2
+        final String TAB_ID = "tab2";
+        
         if (file.isEmpty()) {
             ra.addFlashAttribute("message", "ファイルが選択されていません。");
-            return "redirect:/dataimport";
+            // ファイルが空の場合も、タブを維持してリダイレクト
+            return "redirect:/dataimport?activeTab=" + TAB_ID;
         }
 
         try {
-            // 🚨 修正適用: サービス層のメソッド呼び出しを有効化 🚨
             csvService.importVisitData(file);
             
             ra.addFlashAttribute("message", "来館者予約CSVの取り込みに成功しました。");
@@ -134,16 +148,20 @@ public class DataImportController {
             e.printStackTrace();
             ra.addFlashAttribute("message", "エラー: 来館者予約CSVの処理に失敗しました。詳細: " + e.getMessage());
         }
-        return "redirect:/dataimport?activeTab=visit&messageFor=visit";
+        // 成功/失敗に関わらず、tab2 をアクティブにし、メッセージを visit タブ向けに指定
+        return "redirect:/dataimport?activeTab=" + TAB_ID + "&messageFor=visit";
     }
 
     // 送迎バス運行リストの取り込み処理
     @PostMapping("/upload/bus")
     public String uploadBusCsv(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
+        // CSVアップロードフォームが tab3 にあるため、タブキープ先は tab3
+        final String TAB_ID = "tab3";
+        
         if (file.isEmpty()) {
             ra.addFlashAttribute("message", "ファイルが選択されていません。");
-            // 💡 修正: タブキープに加えて、メッセージの送信先を 'bus' に指定
-            return "redirect:/dataimport?activeTab=bus&messageFor=bus"; 
+            // ファイルが空の場合も、タブを維持してリダイレクト
+            return "redirect:/dataimport?activeTab=" + TAB_ID; 
         }
 
         try {
@@ -155,7 +173,7 @@ public class DataImportController {
             ra.addFlashAttribute("message", "エラー: 送迎バスCSVの処理に失敗しました。詳細: " + e.getMessage());
         }
         
-        // 💡 修正: 成功・失敗に関わらず、タブキープとメッセージ送信先を指定
-        return "redirect:/dataimport?activeTab=bus&messageFor=bus"; 
+        // 成功/失敗に関わらず、tab3 をアクティブにし、メッセージを bus タブ向けに指定
+        return "redirect:/dataimport?activeTab=" + TAB_ID + "&messageFor=bus"; 
     }
 }
