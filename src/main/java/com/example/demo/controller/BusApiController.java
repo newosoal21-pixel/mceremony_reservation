@@ -2,7 +2,7 @@ package com.example.demo.controller;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException; // 新規追加
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -10,6 +10,7 @@ import java.util.Optional;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort; // 🚀 【新規追加】Sortクラスをインポート
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,7 +51,10 @@ public class BusApiController {
     public ResponseEntity<List<BusSituation>> getAllBusSituations() {
     	System.out.println("--- API呼び出し: /api/bus/situations がリクエストされました ---");
         
-        List<BusSituation> situations = busSituationRepository.findAll();
+        // 🚀 【修正箇所】 findAll() に Sort オブジェクトを渡し、'id' (busSituationId) の昇順でソートする
+        // 注意: 'id' は BusSituation エンティティ内の bus_situation_id に対応するフィールド名に依存します。
+        // エンティティ内のフィールド名に合わせてください。（例: 'id' または 'busSituationId'）
+        List<BusSituation> situations = busSituationRepository.findAll(Sort.by("id").ascending());
         
         System.out.println("--- 取得された BusSituation の件数: " + situations.size() + " 件 ---");
         
@@ -59,8 +63,7 @@ public class BusApiController {
     
     /**
      * 送迎バス予約リストの各種フィールド（備考欄、入出庫状況、乗車数）を更新するAPIエンドポイント
-     * @param payload {id: '1', field: 'remarksColumn' or 'busSituation' or 'passengers', value: '...' 
-     * [, extraField: 'emptybusDepTime' or 'departureTime', extraValue: 'yyyy/MM/dd HH:mm']}
+     * ... (updateBusField メソッドは変更なし) ...
      */
     @PostMapping("/update")
     @Transactional 
