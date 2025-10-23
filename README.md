@@ -64,7 +64,7 @@
     * 来館者名、車両ナンバー、予約時間、入庫/出庫ステータスを一覧表示。
 
 PC表示画面
-![駐車場予約リスト画面のキャプチャ](screenshot/parking1.png)
+![駐車場予約リスト画面のキャプチャ](screenshot/parking1.png)!
 
 モバイル表示画面
 ![駐車場予約リスト画面のキャプチャ](screenshot/parking2.png)
