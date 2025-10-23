@@ -43,8 +43,8 @@
 
 <br>
 <div style="text-align: center; margin-bottom: 20px;">
-    <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
-    <img src="screenshot/reserv_convert.png" alt="csv取り込みVBA 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 : csv取り込みVBA画面】</p>
+    <img src="screenshot/reserv_convert1.png" alt="csv取り込みVBA 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
 </div>
 
 ### 2. Java（リアルタイム管理アプリケーション）
