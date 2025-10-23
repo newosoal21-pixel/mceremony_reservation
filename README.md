@@ -63,8 +63,10 @@
 1.  **駐車場予約リスト**
     * 来館者名、車両ナンバー、予約時間、入庫/出庫ステータスを一覧表示。
 
-PC表示画面
-![駐車場予約リスト画面のキャプチャ](screenshot/parking1.png)
+<div style="text-align: center; margin-bottom: 20px;">
+    <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
+    <img src="screenshot/parking1.png" alt="駐車場予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+</div>
 
 
 モバイル表示画面
