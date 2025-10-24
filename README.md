@@ -35,8 +35,8 @@
 
 | カテゴリ | 詳細 |
 | :--- | :--- |
-| **制作環境** | Eclipse |
-| **使用言語** | Java, SQL, HTML, CSS, JavaScript |
+| **制作環境** | Eclipse, EXEL |
+| **使用言語** | Java, SQL, HTML, CSS, JavaScript, VBA |
 | **ブラウザ** | Google Chrome |
 | **データベース** | MySQL 8.0 |
 | **WEBサーバー** | Apache |
