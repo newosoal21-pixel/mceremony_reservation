@@ -81,7 +81,7 @@
 
 2.  **来館者予約リスト**
     * 美容室利用者、打ち合わせ来館者をリスト化し、来館済ステータスを管理。
-
+<br>
 <div style="text-align: center; margin-bottom: 20px;">
     <p style="font-weight: bold; margin-bottom: 5px;">【画像 1: PC表示画面】</p>
     <img src="screenshot/visitor1.png" alt="来館者予約リスト 編集前" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
