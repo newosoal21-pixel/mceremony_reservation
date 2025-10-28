@@ -11,7 +11,7 @@ public class LoginController {
 	@GetMapping("/")
     public String home() {
         // ログイン後のメインテンプレート名 (例: index.html や home.html)
-        return "home"; 
+        return "dashboard"; 
     }
 	
 	@GetMapping("/login")

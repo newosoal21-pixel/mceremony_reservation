@@ -1,18 +1,31 @@
 package com.example.demo.config;
 
+import java.util.Arrays;
+import java.util.List;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // LoginSuccessHandlerを依存性注入
     private final LoginSuccessHandler loginSuccessHandler;
 
     public SecurityConfig(LoginSuccessHandler loginSuccessHandler) {
@@ -20,45 +33,93 @@ public class SecurityConfig {
     }
 
     @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    /**
+     * 💡 役割ベースの同時セッション制御を行うカスタム ConcurrentSessionControlStrategy
+     */
+    public ConcurrentSessionControlAuthenticationStrategy concurrentSessionControlStrategy(SessionRegistry sessionRegistry) {
+        
+        return new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry) {
+            
+            @Override
+            public void onAuthentication(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
+                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+                // 権限が "ADMIN" であるかチェック
+                boolean isAdmin = userDetails.getAuthorities().stream()
+                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN")); 
+
+                if (isAdmin) {
+                    // 管理者: 多重ログイン禁止 (最大セッション数 1)
+                    this.setMaximumSessions(1);
+                    this.setExceptionIfMaximumExceeded(true); // 超過時は例外をスロー (Forbidden)
+                } else {
+                    // 一般ユーザー: 多重ログイン許可 (最大セッション数 無制限)
+                    this.setMaximumSessions(-1);
+                    this.setExceptionIfMaximumExceeded(false); // 超過しても例外をスローしない
+                }
+
+                super.onAuthentication(authentication, request, response);
+            }
+        };
+    }
+    
+    /**
+     * 💡 セッション固定攻撃対策とカスタム同時セッション制御を組み合わせる
+     */
+    @Bean
+    public SessionAuthenticationStrategy sessionAuthenticationStrategy(SessionRegistry sessionRegistry) {
+        SessionFixationProtectionStrategy fixationStrategy = new SessionFixationProtectionStrategy();
+        
+        List<SessionAuthenticationStrategy> strategies = Arrays.asList(
+            fixationStrategy, 
+            concurrentSessionControlStrategy(sessionRegistry)
+        );
+        return new CompositeSessionAuthenticationStrategy(strategies);
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // 権限設定
             .authorizeHttpRequests(auth -> auth
-                // 静的リソースとエラー、ログインページは認証不要
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/error", "/login").permitAll()
-                // その他のすべてのリクエストは認証が必要
                 .anyRequest().authenticated()
             )
             
             // ログイン設定
             .formLogin(form -> form
-                // カスタムログインページのURL
                 .loginPage("/login")
-                // ログイン成功時のリダイレクトはカスタムハンドラーに委任
                 .successHandler(loginSuccessHandler) 
-                // ログイン失敗時のリダイレクト先
                 .failureUrl("/login?error")
                 .permitAll()
             )
             
-            // セッション管理ポリシー (ログアウト後の再ログイン問題を解消)
+            // セッション管理ポリシー
             .sessionManagement(session -> session
-                // ログイン成功時にセッションIDを再生成
-                .sessionFixation().migrateSession() 
+                // 💡 カスタム SessionAuthenticationStrategy を適用
+                .sessionAuthenticationStrategy(sessionAuthenticationStrategy(sessionRegistry())) 
+                
+                // 💡 セッション同時実行制御の有効化と SessionRegistry の登録
+                .maximumSessions(-1) 
+                .sessionRegistry(sessionRegistry()) 
+                
+                // 💡 【追加修正】セッションが超過した際の遷移先（管理者で多重ログイン時などに使用）
+                // 一般ユーザーは例外を投げないため、ここでは管理者ログイン超過時にのみ動作
+                .expiredUrl("/login?expired") 
             )
 
             // ログアウト設定
             .logout(logout -> logout
                 .logoutUrl("/logout") 
                 .logoutSuccessUrl("/login?logout") 
-                // セッションを無効化
                 .invalidateHttpSession(true) 
-                // 💡 【重要】認証情報をクリアすることを強制
                 .clearAuthentication(true) 
-                // 認証情報をクリアし、セッションCookieを削除
                 .deleteCookies("JSESSIONID") 
                 .permitAll()
-                // ログアウト時のレスポンスにキャッシュ無効化ヘッダーを強制的に追加
                 .addLogoutHandler((request, response, authentication) -> {
                     response.setHeader("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
                     response.setHeader("Pragma", "no-cache");
@@ -69,9 +130,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * パスワードのハッシュ化に使用するエンコーダー Beanの定義
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

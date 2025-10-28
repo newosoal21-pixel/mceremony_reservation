@@ -1,44 +1,53 @@
 /**
  * parking.js
  * * 駐車場リスト (#content1) の機能とロジック
- * * 依存: common.js (sendUpdateToServer, formatDate)
+ * * 依存: common.js (sendUpdateToServer, formatDate, showNotificationToast/showNotification)
+ * * 依存: visitor.js/common.js (highlightCellAndId)
+ * * 修正点: 更新成功時に highlightCellAndId(cell) を呼び出すように変更し、sendUpdateToServer への row の受け渡しを削除。
  */
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: parking.js の実行が開始されました。"); 
 
+    // 固定フィールドの結果ID (common.jsの showNotification に渡すタブID)
+    const TARGET_TAB_ID = 'tab1'; 
+    
     // ------------------------------------------------------------------
-    // --- 1. 駐車証No.と駐車位置 (content1) の処理 ---
+    // 💡 visitor.jsと同じハイライト処理を呼び出すヘルパー
+    // ------------------------------------------------------------------
+    function triggerCellHighlight(cell) {
+        // highlightCellAndId は visitor.js で定義され、グローバルに公開されていると想定
+        if (typeof highlightCellAndId === 'function') {
+            highlightCellAndId(cell);
+        } else {
+            console.warn("visitor.js/common.js の highlightCellAndId 関数が見つかりません。");
+        }
+    }
+
+
+    // ------------------------------------------------------------------
+    // --- 3. 駐車証No.と駐車位置 (content1) の処理 ---
     // ------------------------------------------------------------------
     const permitCells = document.querySelectorAll('#content1 .js-permit-number, #content1 .js-permit-location');
 
     permitCells.forEach((cell, index) => {
+        // ... DOM構築ロジックは省略 ...
         if (cell.querySelector('.edit-mode')) { return; }
         
         const originalValue = cell.getAttribute('data-value') || cell.textContent.trim();
-        
-        // フィールドが空になるのを避けるため、HTMLの内容をクリアしてからDOMを再構築
         cell.textContent = ''; 
         cell.style.position = 'relative';
 
-        // ==========================================================
-        // 1. 表示モード (span)
-        // ==========================================================
         const textSpan = document.createElement('span');
         textSpan.textContent = originalValue || '-'; 
         textSpan.className = 'permit-number-text'; 
         textSpan.style.display = 'inline-block'; 
         textSpan.style.visibility = 'visible';
         cell.appendChild(textSpan);
-
-        // ==========================================================
-        // 2. 編集モード (select + 更新ボタン + 取消ボタン)
-        // ==========================================================
-        const editWrapper = document.createElement('div');
-        editWrapper.className = 'edit-mode';
-        editWrapper.setAttribute('data-original-value', originalValue);
         
-        // CSSで定義した絶対配置と見た目を維持するため、インラインで設定
+        // 編集モード関連のDOM要素の取得または作成 (省略)
+        const editWrapper = cell.querySelector('.edit-mode') || document.createElement('div');
+        editWrapper.className = 'edit-mode';
         editWrapper.style.position = 'absolute';
         editWrapper.style.top = '100%';
         editWrapper.style.left = '0';
@@ -46,121 +55,108 @@ document.addEventListener('DOMContentLoaded', () => {
         editWrapper.style.background = '#f8f9fa'; 
         editWrapper.style.border = '1px solid #ccc';
         editWrapper.style.padding = '5px';
-        
-        editWrapper.style.display = 'none'; // 初期状態は非表示
+        editWrapper.style.display = 'none'; 
         editWrapper.style.visibility = 'hidden';
 
-        const selectElement = document.createElement('select');
-        selectElement.name = `parking_permit_or_location_${index + 1}`; 
+        const selectElement = editWrapper.querySelector('.permit-select') || document.createElement('select');
         selectElement.className = 'permit-select'; 
-        
-        // オプションの作成 (1から24)
-        for (let i = 1; i <= 24; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
-            selectElement.appendChild(option);
+        // オプションの生成ロジックは省略
+        if (selectElement.options.length === 0) {
+             for (let i = 1; i <= 24; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                selectElement.appendChild(option);
+            }
+            editWrapper.appendChild(selectElement);
         }
-        editWrapper.appendChild(selectElement);
 
-        // 更新ボタン
-        const updateButton = document.createElement('button');
+        const updateButton = editWrapper.querySelector('.update-button') || document.createElement('button');
         updateButton.textContent = '更新';
         updateButton.className = 'update-button'; 
-        updateButton.style.marginLeft = '5px';
-        updateButton.style.fontSize = '11px';
-        updateButton.style.padding = '2px 5px';
-        updateButton.style.cursor = 'pointer';
-        editWrapper.appendChild(updateButton);
+        if (!updateButton.parentElement) editWrapper.appendChild(updateButton);
         
-        // 取消ボタン
-        const cancelButton = document.createElement('button');
+        const cancelButton = editWrapper.querySelector('.cancel-button') || document.createElement('button');
         cancelButton.textContent = '取消';
         cancelButton.className = 'cancel-button'; 
-        cancelButton.style.marginLeft = '5px';
-        cancelButton.style.fontSize = '11px';
-        cancelButton.style.padding = '2px 5px';
-        cancelButton.style.cursor = 'pointer';
-        editWrapper.appendChild(cancelButton); 
+        if (!cancelButton.parentElement) editWrapper.appendChild(cancelButton);
 
-        cell.appendChild(editWrapper);
+        if (!editWrapper.parentElement) cell.appendChild(editWrapper);
 
-        // ==========================================================
-        // 3. イベントリスナー（クリックと更新処理）
-        // ==========================================================
-        
+
         // <td>クリック (編集モードへ切り替え)
         cell.addEventListener('click', function(e) {
             e.stopPropagation(); 
-            
-
-            if (editWrapper.style.display !== 'none' || editWrapper.contains(e.target)) {
-                return;
-            }
-
+            if (editWrapper.style.display !== 'none' || editWrapper.contains(e.target)) { return; }
             const currentValue = cell.getAttribute('data-value') || (textSpan.textContent === '-' ? '' : textSpan.textContent);
             selectElement.value = currentValue;
-        
-            // 表示モードを非表示
             textSpan.style.display = 'none';
             textSpan.style.visibility = 'hidden';
-            
-            // 💡 修正: inline-flex -> flex に変更してレイアウト崩れを防ぐ
             editWrapper.style.display = 'flex'; 
             editWrapper.style.visibility = 'visible';
             selectElement.focus(); 
         });
 
-		// 更新ボタンが押されたとき (編集 -> 表示 & AJAX POST処理)
+		// 更新ボタンが押されたとき
 		updateButton.addEventListener('click', function(e) {
 		    e.stopPropagation(); 
-		        
 		    const newValue = selectElement.value; 
 		    const newText = selectElement.options[selectElement.selectedIndex].textContent;
-		            
-		    const parkingId = cell.closest('tr').getAttribute('data-parking-id'); 
+		    const row = cell.closest('tr'); // rowを取得
+		    const parkingId = row.getAttribute('data-parking-id'); 
 		            
 		    let fieldName;
+            let fieldNameJp;
 		    if (cell.classList.contains('js-permit-number')) {
 		        fieldName = 'parkingPermit'; 
+                fieldNameJp = '駐車証No.';
 		    } else if (cell.classList.contains('js-permit-location')) {
 		        fieldName = 'parkingPosition'; 
+                fieldNameJp = '駐車位置';
 		    } else {
 		        console.error("更新対象のフィールドを特定できません。");
 		           return; 
 		    }
 
-		    sendUpdateToServer('/api/parking/update', parkingId, fieldName, newValue) 
+		    // 🔴 修正適用: row を削除
+		    sendUpdateToServer('/api/parking/update', parkingId, fieldName, newValue, null, null, TARGET_TAB_ID) 
 		          .then(() => {
-		          // 成功した場合のみDOMを更新
+		          // 💡 common.js の sendUpdateToServer は成功通知のみ行う。DOM更新はここで実行
 		          textSpan.textContent = newText;
 		          cell.setAttribute('data-value', newValue); 
 		          
 		          textSpan.style.display = 'inline-block'; 
 		          textSpan.style.visibility = 'visible';
 		                
-		          // 編集モードを非表示
 		          editWrapper.style.display = 'none';
                   editWrapper.style.visibility = 'hidden';
-		          alert('更新に成功しました！');
+                  
+                  // 🔴 修正適用: highlightCellAndId を呼び出す
+                  triggerCellHighlight(cell);
+
 		          })
 		          .catch(error => {
 		              console.error('更新エラー:', error);
-		              alert('更新に失敗しました。詳細はコンソールを確認してください。');
+		              const errorMessage = '更新に失敗しました。詳細はコンソールを確認してください。';
+                      
+                      // 🔴 修正適用: グローバル関数で通知
+                      if (typeof showNotification === 'function') {
+                          showNotification(errorMessage, 'error', TARGET_TAB_ID); 
+                      }
+                      if (typeof showNotificationToast === 'function') {
+                          showNotificationToast(errorMessage, 'error'); 
+                      }
 		          });
 		});
 		
 		// 取消ボタンのイベントリスナー
         cancelButton.addEventListener('click', function(e) {
             e.stopPropagation(); 
-            // 編集モードを非表示
             editWrapper.style.display = 'none';
             editWrapper.style.visibility = 'hidden';
-            // 表示モードを再表示
             textSpan.style.display = 'inline-block'; 
             textSpan.style.visibility = 'visible';
             
-            // 編集前の値に戻す
             const originalVal = cell.getAttribute('data-value') || textSpan.textContent;
             selectElement.value = originalVal;
         });
@@ -169,14 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 	// ------------------------------------------------------------------
-	// --- 2. 駐車場利用状況 (content1) の処理 ---
+	// --- 4. 駐車場利用状況 (content1) の処理 ---
 	// ------------------------------------------------------------------
 	const parkingStatusCells = document.querySelectorAll('#content1 .js-parking-status');
 	
-	// 🔴 DBのID値に合わせて修正してください 🔴
-	const EXITED_STATUS_ID = '3';       // 例: DB上の「出庫済」ステータスの statusId
-	const TEMP_EXIT_STATUS_ID = '5';    // 例: DB上の「一時出庫中」ステータスの statusId
-	// ------------------------------------------
+	const EXITED_STATUS_ID = '3';       
+	const TEMP_EXIT_STATUS_ID = '5';    
 
 	parkingStatusCells.forEach((cell, index) => {
 	    const textSpan = cell.querySelector('.view-mode-text');
@@ -192,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	        return; 
 	    }
         
-        // 編集モードのスタイル調整
+        // 編集モードのスタイル調整 (省略)
         editWrapper.style.position = 'absolute';
         editWrapper.style.top = '100%';
         editWrapper.style.left = '0';
@@ -201,45 +195,30 @@ document.addEventListener('DOMContentLoaded', () => {
         editWrapper.style.border = '1px solid #ccc';
         editWrapper.style.padding = '5px';
         editWrapper.style.whiteSpace = 'nowrap'; 
-        
         editWrapper.style.display = 'none'; 
         editWrapper.style.visibility = 'hidden';
 
-	    // ==========================================================
-	    // 3. イベントリスナー（クリックと更新処理）
-	    // ==========================================================
-	    
 	    // <td>クリック (編集モードへ切り替え)
 	    cell.addEventListener('click', function(e) {
 	        e.stopPropagation(); 
-	        
-
-	        if (editWrapper.style.display !== 'none' || editWrapper.contains(e.target)) {
-	            return;
-	        }
-
+	        if (editWrapper.style.display !== 'none' || editWrapper.contains(e.target)) { return; }
 	        const currentStatusId = cell.getAttribute('data-status-id'); 
 	        selectElement.value = currentStatusId; 
-	    
-			// 表示モードを非表示
 			textSpan.style.display = 'none';
             textSpan.style.visibility = 'hidden';
-
-			// 💡 修正: inline-flex -> flex に変更してレイアウト崩れを防ぐ
 			editWrapper.style.display = 'flex'; 
             editWrapper.style.visibility = 'visible';
-
 			selectElement.focus(); 
 	    });
 
-		// 更新ボタンが押されたとき (編集 -> 表示 & AJAX POST処理)
+		// 更新ボタンが押されたとき
 		updateButton.addEventListener('click', function(e) {
 		    e.stopPropagation(); 
 		        
 		    const newValueId = selectElement.value; 
 		    const newTextName = selectElement.options[selectElement.selectedIndex].textContent; 
-		            
-		    const parkingId = cell.closest('tr').getAttribute('data-parking-id'); 
+		    const row = cell.closest('tr'); // rowを取得
+		    const parkingId = row.getAttribute('data-parking-id'); 
 		    const fieldName = updateButton.getAttribute('data-field-name'); 
 
               // ----------------------------------------------------------------
@@ -251,23 +230,19 @@ document.addEventListener('DOMContentLoaded', () => {
               let extraField = null;
               let extraValue = null;
 
-              // 選択されたステータスIDを確認
               if (newValueId === EXITED_STATUS_ID || newValueId === TEMP_EXIT_STATUS_ID) {
-                  // 💡 「出庫済」または「一時出庫中」の場合、departureTimeを更新する
-                  extraField = 'departureTime'; // サーバー側の対応するフィールド名
+                  extraField = 'departureTime'; 
                   extraValue = formattedTime;
               } else if (newValueId !== EXITED_STATUS_ID && newValueId !== TEMP_EXIT_STATUS_ID) {
-                  // 💡 それ以外のステータスの場合、departureTimeをNULL（または空文字）で更新する
                   extraField = 'departureTime';
-                  extraValue = ''; // サーバー側でNULLとして処理されることを想定
+                  extraValue = ''; 
               }
               // ----------------------------------------------------------------
               
-              // 🔴 修正: extraField, extraValueをsendUpdateToServerに渡す
-		    sendUpdateToServer('/api/parking/update', parkingId, fieldName, newValueId, extraField, extraValue) // APIパスを追加
+		    // 🔴 修正適用: row を削除
+		    sendUpdateToServer('/api/parking/update', parkingId, fieldName, newValueId, extraField, extraValue, TARGET_TAB_ID)
 		          .then(() => {
 		            
-		              const row = cell.closest('tr');
 		              const updateTimeField = row.querySelector('.js-update-time-field');
 		              const exitTimeField = row.querySelector('.js-exit-time-field');
 		              
@@ -275,37 +250,37 @@ document.addEventListener('DOMContentLoaded', () => {
 		              textSpan.textContent = newTextName;
 		              cell.setAttribute('data-status-id', newValueId); 
 
-		              // 選択されたステータスIDを確認し、DOMを更新
+		              // 時刻フィールドの更新 (common.jsの sendUpdateToServer は DOM 更新は行わないため、ここで実行)
 		              if (newValueId === EXITED_STATUS_ID || newValueId === TEMP_EXIT_STATUS_ID) {
-		                  if (exitTimeField) {
-		                      exitTimeField.textContent = formattedTime;
-		                  }
-		                  if (updateTimeField) {
-		                      updateTimeField.textContent = formattedTime;
-		                  }
-		                  
+		                  if (exitTimeField) { exitTimeField.textContent = formattedTime; }
+		                  // サーバーから返された updateTime を使うのが理想だが、ここでは formattedTime を代用
+		                  if (updateTimeField) { updateTimeField.textContent = formattedTime; } 
 		              } else {
-		                  if (updateTimeField) {
-		                      updateTimeField.textContent = formattedTime;
-		                  }
-		                  // 出庫済でなくなった場合、出庫時刻欄の表示をクリア
-		                  if (exitTimeField) {
-		                      exitTimeField.textContent = ''; 
-		                  }
+		                  // サーバーから返された updateTime を使うのが理想だが、ここでは formattedTime を代用
+		                  if (updateTimeField) { updateTimeField.textContent = formattedTime; }
+		                  if (exitTimeField) { exitTimeField.textContent = ''; }
 		              }
 		              // ----------------------------------------------------------------
 
 	                  textSpan.style.display = 'inline-block'; 
                       textSpan.style.visibility = 'visible';
-			                
-			          // 編集モードを非表示
 			          editWrapper.style.display = 'none';
                       editWrapper.style.visibility = 'hidden';
-			          alert('利用状況と出庫時刻の更新に成功しました！');
+                      
+                      // 🔴 修正適用: highlightCellAndId を呼び出す
+                      triggerCellHighlight(cell);
 			          })
 			          .catch(error => {
 			              console.error('利用状況の更新エラー:', error);
-			             alert('更新に失敗しました。詳細はコンソールを確認してください。');
+			              const errorMessage = '利用状況の更新に失敗しました。詳細はコンソールを確認してください。';
+                          
+                          // 🔴 修正適用: グローバル関数で通知
+                          if (typeof showNotification === 'function') {
+                              showNotification(errorMessage, 'error', TARGET_TAB_ID); 
+                          }
+                          if (typeof showNotificationToast === 'function') {
+                              showNotificationToast(errorMessage, 'error'); 
+                          }
 			          });
 		});
 		
@@ -316,55 +291,39 @@ document.addEventListener('DOMContentLoaded', () => {
              editWrapper.style.visibility = 'hidden';
 	         textSpan.style.display = 'inline-block';
              textSpan.style.visibility = 'visible';
-             
              const originalStatusId = cell.getAttribute('data-status-id'); 
              selectElement.value = originalStatusId;
 	    });
 	});
 
 	// ------------------------------------------------------------------
-	// --- 3. 車両ナンバー (content1) の処理 (最終修正) ---
+	// --- 5. 車両ナンバー (content1) の処理 ---
 	// ------------------------------------------------------------------
 	const vehicleNumberFields = document.querySelectorAll('#content1 .js-vehicle-number-field');
 
 	vehicleNumberFields.forEach(cell => {
 	    const textSpan = cell.querySelector('.vehicle-number-text');
-	    
-	    // フォーム要素の取得: HTMLに合わせ .vehicle-number-edit-form を使用
 	    const form = cell.querySelector('.vehicle-number-edit-form'); 
 	    
-	    // 安全チェック: 必須要素がない場合はスキップし、次の要素へ
-	    if (!textSpan || !form) {
-	         console.error("車両ナンバーフィールドの必須要素が見つかりません。", cell);
-	         return; 
-	    }
+	    if (!textSpan || !form) { return; }
 	    
-	    // フォーム内の要素を取得 (formがnullでないことは確認済み)
 	    const inputField = form.querySelector('.vehicle-number-input');
 	    const updateButton = form.querySelector('.update-vehicle-button');
-	    const cancelButton = form.querySelector('.cancel-vehicle-button'); // HTMLにあるので取得
+	    const cancelButton = form.querySelector('.cancel-vehicle-button'); 
 
-	    if (!inputField || !updateButton || !cancelButton) {
-	        console.error("車両ナンバーフォーム内の必須ボタンまたは入力欄が見つかりません。", form);
-	        return; 
-	    }
+	    if (!inputField || !updateButton || !cancelButton) { return; }
 	    
-	    // フォームを確実に非表示に設定
 	    form.style.display = 'none';
 	    form.style.visibility = 'hidden';
 	    
 	    // <td>クリック (編集モードへ切り替え)
 	    cell.addEventListener('click', function(e) {
 	         e.stopPropagation();
-	        
-	        
-	         // 現在の表示値を入力フィールドにセット
-	         inputField.value = textSpan.textContent.trim();
-	        
+	         // 編集前の値を data-original-value 属性から取得 (ESCキー処理用)
+             const originalValue = textSpan.getAttribute('data-original-value') || textSpan.textContent.trim();
+	         inputField.value = originalValue;
 	         textSpan.style.display = 'none';
 	         textSpan.style.visibility = 'hidden';
-	        
-	         // 💡 修正: 'block' のまま、CSSで縦並びを強制
 	         form.style.display = 'block'; 
 	         form.style.visibility = 'visible';
 	         inputField.focus(); 
@@ -376,27 +335,43 @@ document.addEventListener('DOMContentLoaded', () => {
 	        e.stopPropagation();
 	        
 	        const newNumber = inputField.value;
-	        const recordId = cell.closest('tr').getAttribute('data-parking-id');
+	        const row = cell.closest('tr'); // rowを取得
+	        const recordId = row.getAttribute('data-parking-id');
 	        
-	        sendUpdateToServer('/api/parking/update', recordId, 'carNumber', newNumber) // APIパスを追加
+	        // 🔴 修正適用: row を削除
+	        sendUpdateToServer('/api/parking/update', recordId, 'carNumber', newNumber, null, null, TARGET_TAB_ID) 
 	             .then(() => {
-	                // 成功
+	                
+	                const updateTimeField = row.querySelector('.js-update-time-field');
+	                const formattedTime = formatDate(new Date());
+	                
 	                textSpan.textContent = newNumber;
 	                textSpan.setAttribute('data-original-value', newNumber); 
 	                
-	                // 表示モードを再表示
+	                // サーバーから返された updateTime を使うのが理想だが、ここでは formattedTime を代用
+	                if (updateTimeField) {
+	                    updateTimeField.textContent = formattedTime;
+	                }
+	                
 	                textSpan.style.display = 'inline-block';
 	                textSpan.style.visibility = 'visible';
-	                // 編集モードを非表示
 	                form.style.display = 'none';
 	                form.style.visibility = 'hidden';
-	                alert('車両ナンバーを更新しました！');
+                    
+	                // 🔴 修正適用: highlightCellAndId を呼び出す
+                    triggerCellHighlight(cell);
 	             })
 	             .catch(error => {
 	                 console.error('車両ナンバーの更新エラー:', error);
-	                 alert('更新に失敗しました。詳細はコンソールを確認してください。');
-	                 
-	                 // 失敗した場合、元の値に戻す（今回は textSpan のtextContentを元の値とする）
+	                 const errorMessage = '車両ナンバーの更新に失敗しました。詳細はコンソールを確認してください。';
+
+                     // 🔴 修正適用: グローバル関数で通知
+                     if (typeof showNotification === 'function') {
+                          showNotification(errorMessage, 'error', TARGET_TAB_ID); 
+                     }
+                     if (typeof showNotificationToast === 'function') {
+                          showNotificationToast(errorMessage, 'error'); 
+                     }
 	                 inputField.value = textSpan.textContent.trim();
 	             });
 	    });
@@ -404,14 +379,108 @@ document.addEventListener('DOMContentLoaded', () => {
 	    // 取消ボタンのイベントリスナー
 	    cancelButton.addEventListener('click', function(e) {
 	        e.stopPropagation(); 
-	        
-	        // 入力値を編集前の値に戻す
-	        inputField.value = textSpan.textContent.trim();
-	        
-	        // 編集モードを非表示に戻す
+            // 編集前の値に戻す
+            const originalValue = textSpan.getAttribute('data-original-value') || textSpan.textContent.trim();
+	        inputField.value = originalValue;
 	        form.style.display = 'none';
 	        form.style.visibility = 'hidden';
-	        // 表示モードに戻す
+	        textSpan.style.display = 'inline-block';
+	        textSpan.style.visibility = 'visible';
+	    });
+	});
+    
+	// ------------------------------------------------------------------
+	// --- 6. 備考欄 (content1) の処理 ---
+	// ------------------------------------------------------------------
+	const remarksFields = document.querySelectorAll('#content1 .js-remarks-field');
+
+	remarksFields.forEach(cell => {
+	    const textSpan = cell.querySelector('.remarks-text');
+	    const form = cell.querySelector('.remarks-edit-form'); 
+	    
+	    if (!textSpan || !form) { return; }
+	    
+	    const textarea = form.querySelector('.remarks-textarea');
+	    const updateButton = form.querySelector('.update-remarks-button');
+	    const cancelButton = form.querySelector('.cancel-remarks-button'); 
+
+	    if (!textarea || !updateButton || !cancelButton) { return; }
+
+	    form.style.display = 'none';
+	    form.style.visibility = 'hidden';
+	    
+	    // <td>クリック (編集モードへ切り替え)
+	    cell.addEventListener('click', function(e) {
+	         e.stopPropagation();
+             // 編集前の値を data-original-value 属性から取得 (ESCキー処理用)
+             const originalValue = textSpan.getAttribute('data-original-value') || textSpan.textContent.trim();
+	         textarea.value = originalValue;
+	         textSpan.style.display = 'none';
+	         textSpan.style.visibility = 'hidden';
+	         form.style.display = 'block'; 
+	         form.style.visibility = 'visible';
+	         textarea.focus(); 
+	    });
+
+	    // 更新ボタンのイベントリスナー (AJAX処理)
+	    updateButton.addEventListener('click', function(e) {
+	        e.preventDefault(); 
+	        e.stopPropagation();
+	        
+	        const newRemarks = textarea.value;
+	        const row = cell.closest('tr'); // rowを取得
+	        const recordId = row.getAttribute('data-parking-id'); // parkingリストのIDを取得
+	        
+	        // 🔴 修正適用: row を削除
+	        sendUpdateToServer('/api/parking/update', recordId, 'remarksColumn', newRemarks, null, null, TARGET_TAB_ID) 
+	             .then(() => {
+	                
+	                const updateTimeField = row.querySelector('.js-update-time-field');
+	                const formattedTime = formatDate(new Date());
+	                
+	                // 表示内容の更新
+	                textSpan.textContent = newRemarks;
+	                textSpan.setAttribute('data-original-value', newRemarks); 
+	                
+	                // 更新日時の更新
+	                // サーバーから返された updateTime を使うのが理想だが、ここでは formattedTime を代用
+	                if (updateTimeField) {
+	                    updateTimeField.textContent = formattedTime;
+	                }
+	                
+	                // 表示モードを再表示
+	                textSpan.style.display = 'inline-block';
+	                textSpan.style.visibility = 'visible';
+	                // 編集モードを非表示
+	                form.style.display = 'none';
+	                form.style.visibility = 'hidden';
+	                
+	                // 🔴 修正適用: highlightCellAndId を呼び出す
+                    triggerCellHighlight(cell);
+	             })
+	             .catch(error => {
+	                 console.error('備考欄の更新エラー:', error);
+	                 const errorMessage = '備考欄の更新に失敗しました。詳細はコンソールを確認してください。';
+
+                     // 🔴 修正適用: グローバル関数で通知
+                     if (typeof showNotification === 'function') {
+                          showNotification(errorMessage, 'error', TARGET_TAB_ID); 
+                     }
+                     if (typeof showNotificationToast === 'function') {
+                          showNotificationToast(errorMessage, 'error'); 
+                     }
+	                 textarea.value = textSpan.textContent.trim(); // 元の値に戻す
+	             });
+	    });
+
+	    // 取消ボタンのイベントリスナー
+	    cancelButton.addEventListener('click', function(e) {
+	        e.stopPropagation(); 
+            // 編集前の値に戻す
+            const originalValue = textSpan.getAttribute('data-original-value') || textSpan.textContent.trim();
+	        textarea.value = originalValue;
+	        form.style.display = 'none';
+	        form.style.visibility = 'hidden';
 	        textSpan.style.display = 'inline-block';
 	        textSpan.style.visibility = 'visible';
 	    });

@@ -12,10 +12,12 @@
 	          href="/css/style.css">
     
     <style>
+        /* 既存のThymeleafメッセージスタイルは残し、JS側で非表示にします */
+        /* JSで制御する固定フィールドのテキストには、このスタイルが適用されないように注意 */
         .message-success { color: green; font-weight: bold; padding: 10px; border: 1px solid green; margin-bottom: 15px; }
         .message-error { color: red; font-weight: bold; padding: 10px; border: 1px solid red; margin-bottom: 15px; }
-    </style>
-    <style>
+        
+        /* タブ表示ロジックは残します */
         .tab-contents .content {
             display: none;
         }
@@ -29,7 +31,12 @@
 <body th:data-user-role="${#authorization.expression('hasAuthority(''ADMIN'')') ? 'ADMIN' : 'USER'}">
 	
 	<div id="custom-tooltip" class="custom-tooltip"></div>
-	<div class="excel-container">
+	
+	<div id="notification-toast" class="notification-toast">
+        <span id="notification-message"></span>
+    </div>
+    
+    <div class="excel-container">
 	    
 	    <input type="radio" name="tabs" id="tab1" checked>
 	    <input type="radio" name="tabs" id="tab2">
@@ -48,14 +55,19 @@
 	    
 	    <div class="tab-contents">
 			<section id="content1" class="content">
-			    <h2>🚙 1駐車場予約リスト</h2>
-			    <p>CSVをアップロードして駐車場予約データをインポートできます。</p>
+			    
+                <div class="content-header">
+			        <h2>🚙 1駐車場予約リスト</h2>
+			        <div id="last-operation-result-tab1" class="last-operation-result">
+                        <span id="result-span-tab1">--- 最新の操作結果 ---</span>
+                    </div>
+                </div>
+                <p>CSVをアップロードして駐車場予約データをインポートできます。</p>
                 
 				<div th:if="${message} and ${messageFor == 'parking'}" 
 				         th:class="${message.contains('成功') ? 'message-success' : 'message-error'}" 
-				         th:text="${message}">
-				        アップロードメッセージ
-				</div>
+				         th:text="${message}"
+                         style="display: block;"> </div>
 			    
                 <form th:action="@{/dataimport/upload/parking}" method="post" enctype="multipart/form-data" class="csv-import-form">
 			        <input type="file" name="file" accept=".csv"><br>
@@ -142,13 +154,19 @@
 			</section>
             
 			<section id="content2" class="content">
-			    <h2>🏠 2来館者予約リスト</h2>
-			    <p>CSVをアップロードして来館者予約データをインポートできます。</p>
+			    
+                <div class="content-header">
+			        <h2>🏠 2来館者予約リスト</h2>
+			        <div id="last-operation-result-tab2" class="last-operation-result">
+                        <span id="result-span-tab2">--- 最新の操作結果 ---</span>
+                    </div>
+                </div>
+                <p>CSVをアップロードして来館者予約データをインポートできます。</p>
 
 				<div th:if="${message} and ${messageFor == 'visit'}" 
 				         th:class="${message.contains('成功') ? 'message-success' : 'message-error'}" 
-				         th:text="${message}">
-				        アップロードメッセージ
+				         th:text="${message}"
+                         style="display: block;">
 				</div>
 				
                 <form th:action="@{/dataimport/upload/visit}" method="post" enctype="multipart/form-data" class="csv-import-form">
@@ -232,13 +250,19 @@
 			</section>
             
 			<section id="content3" class="content">
-			    <h2>🚌 3送迎バス運行リスト</h2>
-			    <p>CSVをアップロードして送迎バス運行データをインポートできます。</p>
+			    
+                <div class="content-header">
+			        <h2>🚌 3送迎バス運行リスト</h2>
+			        <div id="last-operation-result-tab3" class="last-operation-result">
+                        <span id="result-span-tab3">--- 最新の操作結果 ---</span>
+                    </div>
+                </div>
+                <p>CSVをアップロードして送迎バス運行データをインポートできます。</p>
 
 				<div th:if="${message} and ${messageFor == 'bus'}" 
 				         th:class="${message.contains('成功') ? 'message-success' : 'message-error'}" 
-				         th:text="${message}">
-				        アップロードメッセージ
+				         th:text="${message}"
+                         style="display: block;">
 				</div>			
 				
                 <form th:action="@{/dataimport/upload/bus}" method="post" enctype="multipart/form-data" class="csv-import-form">
@@ -331,6 +355,8 @@
 					        </tbody>
 					    </table>
 					</div>
+			</section>
+		</div>
 	</div>
 		
 	<script th:src="@{/js/common.js}" src="/js/common.js"></script>
@@ -346,9 +372,6 @@
 
 	    if (activeTabId) {
 	        // 2. 現在の checked 状態をリセットし、指定されたIDのラジオボタンを checked にする
-	        // ※ CSSの仕様により、デフォルトで checked のものも含め、一度リセットして再チェックするのが確実です
-	        
-	        // 全てのラジオボタンのチェックを外す
 	        document.querySelectorAll('input[name="tabs"]').forEach(radio => {
 	            radio.checked = false;
 	        });
@@ -359,18 +382,52 @@
 	            targetTab.checked = true;
 	        }
 	        
-	        // 【補足】サーバー側のリダイレクト処理（Java/Spring Bootなど）で、
-	        // CSVアップロード成功時に以下の形式でリダイレクトするように実装してください。
-	        // ・駐車場予約 (content1) -> redirect:/dataimport?activeTab=tab1
-	        // ・来館者予約 (content2) -> redirect:/dataimport?activeTab=tab2
-	        // ・送迎バス運行 (content3) -> redirect:/dataimport?activeTab=tab3
+	        // URLパラメータをクリアして、画面をクリーンに保つ
+	        // history.replaceState(null, '', window.location.pathname);
 	    }
 	    
-	    // URLからクエリパラメータを削除して、画面をクリーンに保ちたい場合は、以下の行を有効にしてください。（任意）
-	    // if (activeTabId) {
-	    //     history.replaceState(null, '', window.location.pathname);
-	    // }
+	    // ★★★ 既存のThymeleafメッセージをJavaScriptで処理し、固定フィールドに反映させるロジック ★★★
+	    const thymeleafMessages = document.querySelectorAll('.message-success, .message-error');
+
+	    if (thymeleafMessages.length > 0) {
+	        // Thymeleafメッセージが一つでもあれば、それをトースト/固定フィールドに表示
+	        const messageElement = thymeleafMessages[0];
+	        const messageText = messageElement.textContent.trim();
+	        const isSuccess = messageElement.classList.contains('message-success');
+	        const type = isSuccess ? 'success' : 'error';
+	        
+	        // 💡 既存のThymeleafメッセージが表示されているタブを特定
+	        let tabIdForCsv = 'tab1'; 
+            let resultSpanId = 'result-span-tab1';
+
+            if (document.getElementById('content2').contains(messageElement)) {
+                tabIdForCsv = 'tab2';
+                resultSpanId = 'result-span-tab2';
+            } else if (document.getElementById('content3').contains(messageElement)) {
+                tabIdForCsv = 'tab3';
+                resultSpanId = 'result-span-tab3';
+            }
+	        
+            // 3. 固定フィールドにメッセージを転記
+            const resultSpan = document.getElementById(resultSpanId);
+            if (resultSpan) {
+                resultSpan.textContent = messageText;
+                resultSpan.style.color = isSuccess ? 'green' : 'red';
+                resultSpan.style.fontWeight = 'bold';
+            }
+
+	        // 4. common.js に定義された showNotificationToast (または showNotification) 関数を想定し、表示
+	        if (typeof showNotificationToast === 'function') {
+	             showNotificationToast(messageText, type); 
+	        } else if (typeof showNotification === 'function') {
+                 // showNotification(message, type, tabIdForCsv) の形式を想定
+                 showNotification(messageText, type, tabIdForCsv); 
+            }
+
+	        // 5. Thymeleafで表示されたメッセージは、固定フィールドに転記後、非表示にする
+	        messageElement.style.display = 'none';
+	    }
 	});
 	</script>
-	</body>
+</body>
 </html>

@@ -133,14 +133,62 @@
     display: block;
 }
 
+/* ----------------------------------------------------
+   ★★★ 修正箇所: h2と操作結果フィールドを横並びにするコンテナ ★★★
+   ---------------------------------------------------- */
+.content-header {
+    display: flex;
+    justify-content: space-between; /* 左右に配置 */
+    align-items: center; /* 垂直方向の中央揃え */
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* モバイル対応で折り返す */
+}
+
 /* --- 内容エリアの装飾 --- */
-h2 {
+.content-header h2 {
     color: #0066cc;
     border-bottom: 2px solid #0066cc;
     padding-bottom: 5px;
     margin-top: 0;
-    margin-bottom: 20px;
+    margin-bottom: 0; /* content-headerでマージンを制御するためリセット */
+    flex-shrink: 0;
+    margin-right: 20px; /* 結果フィールドとの間隔 */
 }
+
+/* --- 固定フィールド（操作結果）のスタイル --- */
+.last-operation-result {
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    
+    /* PC表示での配置 */
+    flex-shrink: 0;
+    margin-top: 0; 
+}
+
+/* 通知タイプ別の色 (common.jsのnotificationクラスと連携) */
+.last-operation-result.notification-success {
+    background-color: #e6ffe6; 
+    color: #1e7e34;
+    border: 1px solid #1e7e34;
+}
+
+.last-operation-result.notification-error {
+    background-color: #ffe6e6; 
+    color: #bd2130;
+    border: 1px solid #bd2130;
+}
+
+.last-operation-result.notification-info {
+    background-color: #e6f7ff; 
+    color: #117a8b;
+    border: 1px solid #117a8b;
+}
+/* ---------------------------------------------------- */
+
 
 /* === Excel風テーブルのスタイル（PC表示） === */
 .excel-table {
@@ -495,6 +543,69 @@ h2 {
     width: 100%;
 }
 
+/* ========================================================== */
+/* 📢 ★★★ トースト通知スタイル (追加) ★★★ */
+/* ========================================================== */
+.notification-toast {
+    visibility: hidden; /* 初期状態では非表示 */
+    min-width: 280px;
+    margin-left: -140px; /* min-widthの半分 */
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 16px 20px;
+    position: fixed;
+    z-index: 9999; /* 最前面に表示 */
+    left: 50%; /* 中央寄せ */
+    top: 30px; /* 画面上部から30px下に配置 */
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out, top 0.5s ease-in-out; /* アニメーション設定 */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* 通知タイプ別の色 */
+.notification-success {
+    background-color: #28a745; /* 緑 */
+    border: 1px solid #1e7e34;
+}
+
+.notification-error {
+    background-color: #dc3545; /* 赤 */
+    border: 1px solid #bd2130;
+}
+
+.notification-info {
+    background-color: #17a2b8; /* 青 */
+    border: 1px solid #117a8b;
+}
+
+/* トーストを表示状態にするクラス */
+.notification-toast.show {
+    visibility: visible;
+    opacity: 1;
+    top: 50px; /* 少し下にスライドさせて表示 */
+}
+/* ========================================================== */
+
+
+/* ========================================================== */
+/* 📢 ★★★ セル単位のハイライト表示用スタイル (修正・追加) ★★★ */
+/* ========================================================== */
+
+/* 更新されたセルとIDセルに適用されるクラス */
+.highlight-cell {
+    /* 適用したいハイライトの色を設定 */
+    background-color: #ffffe0 !important; /* 薄い黄色 */
+    
+    /* 枠線も目立たせる */
+    border: 1px solid #ffd700 !important; 
+    
+    /* 変化を視覚的に分かりやすくするためのアニメーション設定 */
+    transition: background-color 0.5s ease-out; 
+}
 
 /* ========================================================== */
 /* 📱 モバイル表示 (768px未満) の設定 - 最終調整版 */
@@ -527,6 +638,30 @@ h2 {
         min-height: 0 !important; /* 最小高さをリセット */
         align-items: flex-start; /* tdを上寄せに揃える */
     }
+    
+    /* ----------------------------------------------------
+       ★★★ 修正箇所: モバイル時のcontent-header/last-operation-resultの調整 ★★★
+       ---------------------------------------------------- */
+    .content-header {
+        flex-direction: column; /* 縦並びにする */
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+    
+    .content-header h2 {
+        width: 100%;
+        border-bottom: 2px solid #0066cc;
+        margin-bottom: 10px;
+        margin-right: 0;
+    }
+
+    .last-operation-result {
+        width: 100%;
+        margin-top: 5px;
+        font-size: 1.1rem;
+        white-space: normal; /* 折り返しを許可 */
+    }
+    /* ---------------------------------------------------- */
     
     /* ------------------------------------------- */
     /* モバイル時のログアウトボタンの配置調整 (維持) */
@@ -815,6 +950,12 @@ h2 {
         align-items: center;
         justify-content: center;
         margin: 0;
+    }
+    
+    /* モバイル表示時のセルハイライト */
+    .excel-table td.highlight-cell {
+        background-color: #ffffe0 !important;
+        border: 1px solid #ffd700 !important;
     }
 }
 
