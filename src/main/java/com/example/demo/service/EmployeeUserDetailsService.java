@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.util.Collections;
 import java.util.List;
 
+// import org.springframework.cache.annotation.Cacheable; // 💡 キャッシュ関連のインポートは不要になりました
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,12 +25,18 @@ public class EmployeeUserDetailsService implements UserDetailsService {
 
     // ユーザー名に基づいてユーザー情報をロード
     @Override
+    // @Cacheable("users") 💡 2回目ログイン失敗の原因であったキャッシュアノテーションを削除
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // ユーザー名でDB検索
-        Employee employee = employeeRepository.findByUserName(username);
+        
+        // ユーザー名の前後の空白を削除
+        String trimmedUsername = username.trim(); 
+        
+        // ユーザー名でDB検索（トリミング後のユーザー名を使用）
+        Employee employee = employeeRepository.findByUserName(trimmedUsername);
         
         if (employee == null) {
-            throw new UsernameNotFoundException("ユーザー名: " + username + " が見つかりません。");
+            // ユーザーが見つからない場合の例外
+            throw new UsernameNotFoundException("ユーザー名: " + trimmedUsername + " が見つかりません。");
         }
         
         // 権限を設定: is_adminフラグに基づき 'ADMIN' または 'USER' の権限を付与

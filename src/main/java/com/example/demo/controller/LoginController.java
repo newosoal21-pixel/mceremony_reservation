@@ -1,21 +1,25 @@
 package com.example.demo.controller;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model; // Modelは不要になることが多いが、エラーメッセージ表示のために残すことも可能
-import org.springframework.web.bind.annotation.GetMapping;
+import jakarta.servlet.http.HttpServletResponse;
 
-// 💡 Spring Securityへ移行した場合、LoginControllerはシンプルになります
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class LoginController {
 
-    // 1. ログインフォーム表示
-    @GetMapping("/login")
-    public String showLoginForm(Model model) { // Modelはエラーパラメータ処理のために残す
-        // Spring Securityは認証失敗時、/login?error を返すため、
-        // テンプレート側でエラーパラメータをチェックして表示するのが一般的です。
-        return "login"; // login.html を返す
+	@GetMapping("/")
+    public String home() {
+        // ログイン後のメインテンプレート名 (例: index.html や home.html)
+        return "home"; 
     }
-    
-    // 💡 @PostMapping("/login") と @GetMapping("/logout") は削除されます
+	
+	@GetMapping("/login")
+    public String loginPage(HttpServletResponse response) {
+        // ログインページへのアクセス時にキャッシュ無効化ヘッダーを追加
+        response.setHeader("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
+        return "login"; 
+    }
 }

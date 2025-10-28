@@ -12,6 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // LoginSuccessHandlerを依存性注入
     private final LoginSuccessHandler loginSuccessHandler;
 
     public SecurityConfig(LoginSuccessHandler loginSuccessHandler) {
@@ -19,42 +20,60 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .authorizeHttpRequests(requests -> requests
-                // 公開エンドポイント
-                .requestMatchers("/login", "/css/**", "/js/**").permitAll()
-                
-                // 🔐 管理者専用エンドポイント 1: /admin/**
-                .requestMatchers("/admin/**").hasAuthority("ADMIN") 
-                
-                // 💡 修正: 管理者専用エンドポイント 2: /dataimport/** を 'ADMIN'権限で許可
-                // AntPathRequestMatcherを使うとより確実ですが、ここでは文字列パスで設定します。
-                .requestMatchers("/dataimport/**").hasAuthority("ADMIN")
-                
-                .requestMatchers("/employees/**").hasAuthority("ADMIN")
-                
+            // 権限設定
+            .authorizeHttpRequests(auth -> auth
+                // 静的リソースとエラー、ログインページは認証不要
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/error", "/login").permitAll()
                 // その他のすべてのリクエストは認証が必要
                 .anyRequest().authenticated()
             )
+            
+            // ログイン設定
             .formLogin(form -> form
+                // カスタムログインページのURL
                 .loginPage("/login")
-                .loginProcessingUrl("/login") 
-                .successHandler(loginSuccessHandler)
+                // ログイン成功時のリダイレクトはカスタムハンドラーに委任
+                .successHandler(loginSuccessHandler) 
+                // ログイン失敗時のリダイレクト先
                 .failureUrl("/login?error")
                 .permitAll()
             )
+            
+            // セッション管理ポリシー (ログアウト後の再ログイン問題を解消)
+            .sessionManagement(session -> session
+                // ログイン成功時にセッションIDを再生成
+                .sessionFixation().migrateSession() 
+            )
+
+            // ログアウト設定
             .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout")
+                .logoutUrl("/logout") 
+                .logoutSuccessUrl("/login?logout") 
+                // セッションを無効化
+                .invalidateHttpSession(true) 
+                // 💡 【重要】認証情報をクリアすることを強制
+                .clearAuthentication(true) 
+                // 認証情報をクリアし、セッションCookieを削除
+                .deleteCookies("JSESSIONID") 
                 .permitAll()
+                // ログアウト時のレスポンスにキャッシュ無効化ヘッダーを強制的に追加
+                .addLogoutHandler((request, response, authentication) -> {
+                    response.setHeader("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+                    response.setHeader("Pragma", "no-cache");
+                    response.setHeader("Expires", "0");
+                })
             );
 
         return http.build();
+    }
+
+    /**
+     * パスワードのハッシュ化に使用するエンコーダー Beanの定義
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
