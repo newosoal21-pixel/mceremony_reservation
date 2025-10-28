@@ -32,5 +32,6 @@ META-INF\maven\com.example\clemony_reservation\pom.properties
 com\example\demo\repository\VisitSituationRepository.class
 com\example\demo\Testpass.class
 com\example\demo\model\ParkingStatus.class
+com\example\demo\config\SecurityConfig$1.class
 com\example\demo\config\LoginSuccessHandler.class
 com\example\demo\model\ShuttleBusReservation.class

@@ -17,9 +17,8 @@
 	
 	<div id="custom-tooltip" class="custom-tooltip"></div>
 	
-	<div id="notification-toast" class="notification-toast">
-        <span id="notification-message"></span>
-    </div>
+	<div id="notification-toast-container" class="notification-toast-container">
+        </div>
     
     <div class="excel-container">
 	    
@@ -44,6 +43,7 @@
 			    
                 <div class="content-header">
 			        <h2>🚙 1駐車場予約リスト</h2>
+			        <div class="notification-area"></div>
 			        <div id="last-operation-result-tab1" class="last-operation-result">
                         <span>--- 最新の操作結果 ---</span>
                     </div>
@@ -79,7 +79,7 @@
 			                    
 			                    <td data-label="用件と続柄" class="group-1-col" th:text="${parking.errandsRelationship}"></td>
 			                    
-			                    <td data-label="車両ナンバー" class="js-vehicle-number-field group-1-col" th:data-record-id="${parking.id}">
+			                    <td data-label="車両ナンバー" class="js-vehicle-number-field group-1-col">
 			                        <span class="vehicle-number-text" 
 			                              th:text="${parking.carNumber}"
 			                              th:data-original-value="${parking.carNumber}"></span>
@@ -102,11 +102,29 @@
 			                        th:text="${parking.departureTime != null ? #temporals.format(parking.departureTime, 'yyyy/MM/dd HH:mm') : ''}">
 			                    </td>
 			                    
-			                    <td data-label="駐車証No." class="js-permit-number group-2-col" th:text="${parking.parkingPermit}" th:data-value="${parking.parkingPermit}"></td>
+			                    <td data-label="駐車証No." class="js-permit-number group-2-col" th:attr="data-value=${parking.parkingPermit}">
+			                        <span class="view-mode-text" th:text="${parking.parkingPermit}"></span>
+
+			                        <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+			                            <select class="form-select form-select-sm permit-number-select">
+			                                </select>
+			                            <button class="btn btn-primary btn-sm js-update-button" data-field-name="parkingPermit" style="margin-left: 5px;">更新</button> 
+			                            <button class="btn btn-secondary btn-sm js-cancel-button">取消</button>
+			                        </div>
+			                    </td>
 			                    
-			                    <td data-label="駐車位置" class="js-permit-location group-2-col" th:text="${parking.parkingPosition}" th:data-value="${parking.parkingPosition}"></td>
+			                    <td data-label="駐車位置" class="js-permit-location group-2-col" th:attr="data-value=${parking.parkingPosition}">
+			                        <span class="view-mode-text" th:text="${parking.parkingPosition}"></span>
+
+			                        <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+			                            <select class="form-select form-select-sm permit-location-select">
+			                                </select>
+			                            <button class="btn btn-primary btn-sm js-update-button" data-field-name="parkingPosition" style="margin-left: 5px;">更新</button> 
+			                            <button class="btn btn-secondary btn-sm js-cancel-button">取消</button>
+			                        </div>
+			                    </td>
 			                    
-										<td data-label="利用状況" 
+			                    <td data-label="利用状況" 
 										    class="js-parking-status group-2-col"
 										    th:attr="data-status-id=${parking.parkingStatus.statusId}">
 										    
@@ -135,7 +153,7 @@
 			                        th:text="${#temporals.format(parking.updateTime, 'yyyy/MM/dd HH:mm')}">
 			                    </td>
 			                    
-										<td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${parking.id}">
+			                    <td data-label="備考欄" class="js-remarks-field group-2-col">
 										    <span class="remarks-text" th:text="${parking.remarksColumn}"></span>
 										    
 										    <form class="remarks-edit-form" style="display: none; visibility: hidden;">
@@ -159,6 +177,7 @@
 			    
                 <div class="content-header">
 			        <h2>🏠 2来館者予約リスト</h2>
+                    <div class="notification-area"></div>
 			        <div id="last-operation-result-tab2" class="last-operation-result">
                         <span>--- 最新の操作結果 ---</span>
                     </div>
@@ -167,7 +186,7 @@
 			    
 			    <div class="table-wrapper">
 			        <table class="excel-table">
-			            <thead>
+			            <thead >
 			                <tr>
 			                    <th>来館者予約リストID</th>
 			                    <th>来館予定日時</th>
@@ -194,8 +213,7 @@
 			                    <td data-label="対応完了時刻" class="group-2-col js-compilation-cmp-time-field" th:text="${visit.compilationCmpTime != null ? #temporals.format(visit.compilationCmpTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 												
 												<td data-label="来館状況" class="js-visit-situation group-2-col" 
-														th:data-situation-id="${visit.visitSituation != null ? visit.visitSituation.id : ''}"
-														th:data-record-id="${visit.id}" 
+														th:attr="data-situation-id=${visit.visitSituation != null ? visit.visitSituation.id : ''}"
 														style="position: relative;"> 
 														
 														<span class="view-mode-text status-red-bold" 
@@ -218,7 +236,7 @@
 												</td>
 												<td data-label="更新日時" class="group-2-col js-update-time-field" th:text="${visit.updateTime != null ? #temporals.format(visit.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 												
-												<td data-label="備考欄" class="js-remarks-field-visit group-2-col" th:data-record-id="${visit.id}">
+												<td data-label="備考欄" class="js-remarks-field-visit group-2-col">
 													<span class="remarks-text" th:text="${visit.remarksColumn}"></span>
 																	                                
 														<form class="remarks-edit-form" style="display: none; visibility: hidden;">
@@ -242,6 +260,7 @@
 			    
                 <div class="content-header">
 			        <h2>🚌 3送迎バス運行リスト</h2>
+                    <div class="notification-area"></div>
 			        <div id="last-operation-result-tab3" class="last-operation-result">
                         <span>--- 最新の操作結果 ---</span>
                     </div>
@@ -268,18 +287,26 @@
 			                </tr>
 			            </thead>
 			            <tbody>
-			                <tr th:each="bus : ${busReservations}">
+			                <tr th:each="bus : ${busReservations}" th:attr="data-bus-id=${bus.id}">
 			                    <td data-label="送迎バス運行リスト" class="group-1-col js-list-id-field" th:text="${bus.id}"></td>
 			                    
 			                    <td data-label="参列者到着予定日時" class="group-1-col" th:text="${bus.visitReservationTime != null ? #temporals.format(bus.visitReservationTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 			                    <td data-label="運行バス会社名（定員）" class="group-1-col" th:text="${bus.busName}"></td>
 			                    <td data-label="発着終着場所" class="group-1-col" th:text="${bus.busDestination}"></td>
-			                    <td data-label="下車済バス出庫時刻" class="group-1-col" th:text="${bus.emptybusDepTime != null ? #temporals.format(bus.emptybusDepTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
-			                    <td data-label="参列者出発予定時刻" class="group-2-col" th:text="${bus.scheduledDepTime != null ? #temporals.format(bus.scheduledDepTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
+			                    
+			                    <td data-label="下車済バス出庫時刻" class="group-1-col js-emptybus-dep-time-field" 
+			                        th:text="${bus.emptybusDepTime != null ? #temporals.format(bus.emptybusDepTime, 'yyyy/MM/dd HH:mm') : ''}">
+			                    </td>
+			                    
+			                    <td data-label="参列者出発予定時刻" class="group-2-col js-scheduled-dep-time-field" 
+			                        th:text="${bus.scheduledDepTime != null ? #temporals.format(bus.scheduledDepTime, 'yyyy/MM/dd HH:mm') : ''}">
+			                    </td>
+			                    
 			                    <td data-label="乗車済バス出庫時刻" class="group-2-col" th:text="${bus.departureTime != null ? #temporals.format(bus.departureTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 			                    <td data-label="手配両家名" class="group-2-col" th:text="${bus.familyNames}"></td>
 			                    <td data-label="担当" class="group-2-col" th:text="${bus.managerName}"></td>
-											<td data-label="乗車数" class="js-passengers-field group-2-col" th:data-record-id="${bus.id}">
+			                    
+			                    <td data-label="乗車数" class="js-passengers-field group-2-col">
 											    <span class="passengers-text" th:text="${bus.passengers} + '名'" th:data-original-value="${bus.passengers}"></span>
 											    
 											    <form class="passengers-edit-form" style="display: none; visibility: hidden;">
@@ -293,9 +320,10 @@
 											        <button type="button" class="cancel-passengers-button js-cancel-passengers-button">取消</button>
 											    </form>
 											</td>
+											
 											<td data-label="入出庫状況" 
 											    class="js-bus-status group-2-col" 
-											    th:attr="data-status-id=${bus.busSituation.id}, data-status-name=${bus.busSituation.name}, data-record-id=${bus.id}">
+											    th:attr="data-status-id=${bus.busSituation.id}, data-status-name=${bus.busSituation.name}">
 											    
 											    <span class="view-mode-text status-red-bold" th:text="${bus.busSituation.name}"></span>
 											    
@@ -317,7 +345,7 @@
 			                    
 			                    <td data-label="更新日時" class="group-2-col js-update-time-field" th:text="${bus.updateTime != null ? #temporals.format(bus.updateTime, 'yyyy/MM/dd HH:mm') : ''}"></td>
 			                    
-											<td data-label="備考欄" class="js-remarks-field group-2-col" th:data-record-id="${bus.id}">
+			                    <td data-label="備考欄" class="js-remarks-field group-2-col">
 											    <span class="remarks-text" th:text="${bus.remarksColumn}"></span>
 											    
 											    <form class="remarks-edit-form" style="display: none; visibility: hidden;">
@@ -335,7 +363,16 @@
 			</section>
 		</div>
 	</div>
+	
+	<script src="https://code.jquery.com/jquery-3.7.1.min.js" 
+	            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" 
+	            crossorigin="anonymous"></script>
+
+	<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+	
 	<script th:src="@{/js/common.js}" src="/js/common.js"></script>
+	
 	<script th:src="@{/js/parking.js}" src="/js/parking.js"></script>
 	<script th:src="@{/js/visitor.js}" src="/js/visitor.js"></script>
 	<script th:src="@{/js/bus.js}" src="/js/bus.js"></script>

@@ -2,8 +2,10 @@
  * bus.js
  * * 送迎バス運行リスト (#content3) の機能とロジック
  * * 依存: common.js (sendUpdateToServer, formatDate, showNotificationToast, showNotification, highlightCellAndId)
- * * 修正点: ローカルの通知関数 (updateOperationResultField) を削除し、エラー処理をグローバル関数に統一。
- * * 修正点: 更新成功時に highlightRow の代わりに highlightCellAndId を呼び出し、更新セルとIDセルをハイライト。
+ * * 修正 V8.5:
+ * * 1. ローカル通知関数 (updateOperationResultField) を追加。
+ * * 2. 入出庫状況、乗車数の更新成功時、このローカル通知関数を強制的に呼び出すロジックを追加し、
+ * * メッセージが表示されない問題を解決する。
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,13 +14,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const busContent = document.getElementById('content3');
     if (!busContent) return; // タブ3がない場合は終了
 
-    // 💡 ターゲットタブIDを定義
+    // 💡 ターゲットタブIDとセレクタを定義 (V8.5: 追加)
     const TARGET_TAB_ID = 'tab3';
+    const CONTENT_SELECTOR = '#content3';
     
     // ------------------------------------------------------------------
-    // 💡 修正: highlightRow 関数に依存するヘルパーを削除
+    // 💡 ID取得ヘルパー関数 (V7 追加)
     // ------------------------------------------------------------------
-    // 💡 削除: function triggerRowHighlight(row) { ... } を削除します。
+    function getBusRecordId(element) {
+        const row = element.closest('tr');
+        // 💡 修正点: <tr>から data-bus-id を取得するように変更
+        const recordId = row ? row.getAttribute('data-bus-id') : null; 
+        if (!recordId) {
+            console.error("エラー: 送迎バスレコードID (data-bus-id) が見つかりません。");
+        }
+        return recordId;
+    }
+
+
+	// ------------------------------------------------------------------
+	// 💡 ローカル通知関数 (V8.5: 追加)
+	// ------------------------------------------------------------------
+    const RESULT_FIELD_IDS = {
+        '#content3': "last-operation-result-tab3"
+    };
+
+    /**
+     * 更新結果を固定表示欄とトーストで表示する
+     * @param {string} contentSelector - タブのセレクタ ('#content3')
+     * @param {boolean} success - 成功/失敗
+     * @param {string} message - 表示するメッセージ
+     */
+    function updateOperationResultField(contentSelector, success, message) {
+        const fieldId = RESULT_FIELD_IDS[contentSelector];
+        if (!fieldId) {
+            console.error(`結果フィールドIDが見つかりません: ${contentSelector}`);
+            return;
+        }
+        
+        const resultDiv = document.getElementById(fieldId);
+        const resultSpan = resultDiv ? resultDiv.querySelector('span') : null;
+
+        if (resultDiv) {
+            // 見栄え調整
+            resultDiv.style.minWidth = '250px';      
+            resultDiv.style.maxWidth = '300px';      
+            resultDiv.style.wordWrap = 'break-word'; 
+            resultDiv.style.whiteSpace = 'normal';   
+        }
+        
+        if (resultSpan) {
+            resultSpan.textContent = message;
+            resultSpan.style.color = success ? 'green' : 'red';
+            resultSpan.style.fontWeight = 'bold';
+        }
+
+         // 💡 common.js の showNotificationToast を使ってトースト表示を強制実行
+         if (typeof showNotificationToast === 'function') {
+             showNotificationToast(message, success ? 'success' : 'error');
+         } else {
+             console.warn("common.js の showNotificationToast 関数が見つかりません。");
+             // 失敗時のみ共通の showNotification にフォールバック
+             if (typeof showNotification === 'function' && !success) {
+                 showNotification(message, 'error', TARGET_TAB_ID);
+             }
+         }
+    }
 
 
 	// ==========================================================
@@ -52,13 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	        console.error("DEBUG: Failed to fetch bus situations:", error);
 	        
             const errorMessage = '入出庫状況の選択肢データをロードできませんでした。';
-            // 🔴 修正適用: グローバル関数で通知
-            if (typeof showNotification === 'function') {
-                showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-            }
-            if (typeof showNotificationToast === 'function') {
-                showNotificationToast(errorMessage, 'error'); 
-            }
+            // 💡 V8.5: ローカル通知関数でエラー表示
+            updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
 	    }
 	}
     
@@ -103,15 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // A. 編集モードに切り替えるイベント委譲 (クリック)
         // ==========================================================
         
-        // 1. 入出庫状況 (クリック)
+        // 1. 入出庫状況 (クリック) (省略)
 	    busTableBody.addEventListener('click', (e) => {
-	        const cell = e.target.closest('.js-bus-status');
-            // 乗車数欄をクリックした場合は入出庫状況の処理をしない
+            const cell = e.target.closest('.js-bus-status');
             if (e.target.closest('.js-passengers-field')) return;
-	        
 	        if (!cell || e.target.closest('button')) return;
 	        if (cell.classList.contains('is-editing')) return;
-	        
 	        
 	        const editMode = cell.querySelector('.edit-mode-select');
 	        if (!editMode) return;
@@ -132,18 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
 	        if(selectElement) selectElement.focus();
 	    });
         
-        // 2. 乗車数 (シングルクリック)
+        // 2. 乗車数 (シングルクリック) (省略)
         busTableBody.addEventListener('click', (e) => {
             const cell = e.target.closest('.js-passengers-field');
-
-            // 乗車数セル以外、またはボタンクリックの場合は無視
             if (!cell || e.target.closest('button')) return; 
-            // 既に編集モードの場合は無視
             if (cell.classList.contains('is-editing')) return;
-            // 他のセルが編集中であれば無視
             if (busContent.querySelector('.js-passengers-field.is-editing, .js-bus-status.is-editing')) return;
             
-            // 編集モード要素の取得
             const passengersText = cell.querySelector('.passengers-text');
             const editForm = cell.querySelector('.passengers-edit-form');
             const input = cell.querySelector('.passengers-input');
@@ -153,29 +201,25 @@ document.addEventListener('DOMContentLoaded', () => {
                  return; 
             }
             
-            // 現在の表示値から「名」を除去し、inputに設定する
             let currentValue = passengersText.textContent.replace('名', '').trim();
-            
             if (currentValue === '') {
                 currentValue = passengersText.dataset.originalValue || '';
             }
             input.value = currentValue;
 
-            // 🚀 スタイルの調整: inputの幅を100%にし、枠内に収める
+            // 🚀 スタイルの調整
             input.style.width = '100%'; 
-            input.style.MozAppearance = 'textfield';        // Firefox
-            input.style.WebkitAppearance = 'none';          // Chrome, Safari
-            input.style.margin = '0';                       // マージンをリセット
+            input.style.MozAppearance = 'textfield';        
+            input.style.WebkitAppearance = 'none';          
+            input.style.margin = '0';                       
 
-            // is-editing クラスを付与
             cell.classList.add('is-editing');
             
-            // インラインスタイルで表示/非表示を切り替える
             passengersText.style.display = 'none';
-            editForm.style.display = 'block'; // Flexboxに上書きされるが、一時的に
+            editForm.style.display = 'block'; 
             editForm.style.visibility = 'visible'; 
             
-            // 🚀 スタイルの調整: Flexbox設定と最大幅の制限 (フォーム全体をセルに合わせる)
+            // 🚀 スタイルの調整: Flexbox設定
             editForm.style.display = 'flex';           
             editForm.style.flexDirection = 'column';   
             editForm.style.alignItems = 'stretch';     
@@ -189,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 	    // ==========================================================
-        // B. 「取消」ボタンクリック処理 (イベント委譲)
+        // B. 「取消」ボタンクリック処理 (イベント委譲) (省略)
         // ==========================================================
 
 	    // 1. 入出庫状況の取消
@@ -204,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	        
 	        if (viewMode && editMode) {
 	            cell.classList.remove('is-editing');
-	            
 	            viewMode.style.display = 'inline';
 	            editMode.style.display = 'none';
 	            
@@ -241,8 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 editForm.style.flexDirection = '';
                 editForm.style.alignItems = '';
                 editForm.style.gap = '';
-                editForm.style.maxWidth = ''; // リセット
-                editForm.style.boxSizing = ''; // リセット
+                editForm.style.maxWidth = ''; 
+                editForm.style.boxSizing = ''; 
 
                 input.style.width = ''; 
                 input.style.MozAppearance = ''; 
@@ -256,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // C. 「更新」ボタンクリック処理 (API連携) (イベント委譲)
         // ==========================================================
 
-		// 1. 入出庫状況の更新 (アラートなし)
+		// 1. 入出庫状況の更新 - 💡 V8.5: ローカル通知を強制実行
         busTableBody.addEventListener('click', async (e) => {
             const updateButton = e.target.closest('.js-update-button-bus');
             if (!updateButton) return;
@@ -264,21 +307,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = updateButton.closest('.js-bus-status');
             const row = updateButton.closest('tr');
             
-            const recordId = cell.getAttribute('data-record-id'); 
+            const recordId = getBusRecordId(updateButton); 
+            if (!recordId) return; 
+            
             const selectElement = cell.querySelector('.js-bus-situation-select');
             
             const fieldName = updateButton.dataset.fieldName; 
             const newValueId = selectElement.value; 
 
             if (!newValueId || newValueId.trim() === '') {
-                 // 🔴 修正適用: グローバル関数で通知
                  const errorMessage = '入出庫状況を選択してください。';
-                 if (typeof showNotification === 'function') {
-                    showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                 }
-                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(errorMessage, 'error'); 
-                 }
+                 // 💡 V8.5: ローカル通知関数でエラー表示
+                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                  return;
             }
             
@@ -286,12 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof formatDate === 'undefined') {
                 console.error("ERROR: formatDate関数がcommon.jsで見つかりません。");
                 const errorMessage = "時刻フォーマット関数が未定義です。common.jsを確認してください。";
-                 if (typeof showNotification === 'function') {
-                    showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                 }
-                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(errorMessage, 'error'); 
-                 }
+                // 💡 V8.5: ローカル通知関数でエラー表示
+                updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 return;
             }
             const currentTime = formatDate(new Date());
@@ -316,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             try {
-                // ✅ API呼び出し: extraFieldとextraValueを含めてsendUpdateToServerを呼び出し
+                // ✅ API呼び出し
                 const result = await sendUpdateToServer(
                     '/api/bus/update', 
                     recordId, 
@@ -324,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     newValueId, 
                     extraField, 
                     extraValue,
-                    TARGET_TAB_ID // Tab IDを明示的に渡す
+                    TARGET_TAB_ID 
                 );
                 
                 // --- 成功時の画面表示更新ロジック ---
@@ -335,22 +371,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.setAttribute('data-status-id', newValueId); 
                 
                 // 最終更新日時 (12列目) を更新
-                const updateTimeCell = row.querySelector('.js-update-time-field'); // 💡 セレクタを修正
+                const updateTimeCell = row.querySelector('.js-update-time-field'); 
                 
                 if (updateTimeCell) {
-                     // サーバーから返された時刻があればそれを使う。なければローカルの時刻 (currentTime) を使う。
                      updateTimeCell.textContent = result.updateTime || currentTime; 
                 }
                 
                 // 🚀 出庫時刻欄 (5列目/7列目) を更新
                 if (fieldName === 'busSituation') {
                     if (newStatusName === '下車出発済') {
-                        // 💡 セレクタをクラス名ではなくth:attrの列番号で指定
-                        const emptyBusDepTimeCell = row.querySelector('td:nth-child(5)'); 
+                        const emptyBusDepTimeCell = row.querySelector('.js-emptybus-dep-time-field'); 
                         if (emptyBusDepTimeCell) emptyBusDepTimeCell.textContent = currentTime;
                     } 
                     else if (newStatusName === '乗車出発済') {
-                        // 💡 セレクタをクラス名ではなくth:attrの列番号で指定
                         const depTimeCell = row.querySelector('td:nth-child(7)'); 
                         if (depTimeCell) depTimeCell.textContent = currentTime;
                     }
@@ -360,10 +393,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 viewMode.style.display = 'inline'; 
                 editMode.style.display = 'none'; 
                 
-                // 🔴 修正適用: highlightRow(row) を highlightCellAndId(cell) に変更
                 if (typeof highlightCellAndId === 'function') {
                     highlightCellAndId(cell);
                 }
+                
+                // 💡 V8.5: ローカル通知関数でメッセージを強制表示
+                const successMessage = `ID: ${recordId} の 入出庫状況 を ${newStatusName} に更新しました。`;
+                updateOperationResultField(CONTENT_SELECTOR, true, successMessage);
 
 
             } catch (error) {
@@ -371,26 +407,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('API呼び出しエラー:', error);
                 
                 const errorMessage = `ID: ${recordId} - 更新に失敗しました。詳細: ${error.message}`;
-                // 🔴 修正適用: グローバル関数で通知
-                 if (typeof showNotification === 'function') {
-                    showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                 }
-                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(errorMessage, 'error'); 
-                 }
+                // 💡 V8.5: ローカル通知関数でエラー表示
+                updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 
                 cell.querySelector('.js-cancel-button-bus').click(); 
             }
         });
         
-        // 2. 乗車数の更新 (アラートあり)
-        busTableBody.addEventListener('click', (e) => {
+        // 2. 乗車数の更新 - 💡 V8.5: async/await に修正し、ローカル通知を強制実行
+        busTableBody.addEventListener('click', async (e) => {
             const updateButton = e.target.closest('.js-update-passengers-button');
             if (!updateButton) return;
 
             const cell = updateButton.closest('.js-passengers-field');
             const row = updateButton.closest('tr');
-            const recordId = cell.dataset.recordId;
+            
+            const recordId = getBusRecordId(updateButton);
+            if (!recordId) return; 
+
             const passengersText = cell.querySelector('.passengers-text');
             const input = cell.querySelector('.passengers-input');
             const editForm = cell.querySelector('.passengers-edit-form');
@@ -405,120 +439,84 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const parsedValue = parseInt(newValue, 10);
             if (isNaN(parsedValue) || newValue === '') {
-                // 🔴 修正適用: グローバル関数で通知
                 const errorMessage = '乗車数には数値を入力してください。';
-                 if (typeof showNotification === 'function') {
-                    showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                 }
-                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(errorMessage, 'error'); 
-                 }
+                // 💡 V8.5: ローカル通知関数でエラー表示
+                updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 return;
             }
             if (parsedValue < 0) {
-                 // 🔴 修正適用: グローバル関数で通知
                  const errorMessage = '乗車数は0以上の値を入力してください。';
-                 if (typeof showNotification === 'function') {
-                    showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                 }
-                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(errorMessage, 'error'); 
-                 }
+                 // 💡 V8.5: ローカル通知関数でエラー表示
+                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                  return;
             }
             
-            // common.jsのformatDate(new Date())を使用
             if (typeof formatDate === 'undefined') {
                  console.error("ERROR: formatDate関数がcommon.jsで見つかりません。");
                  const errorMessage = "時刻フォーマット関数が未定義です。common.jsを確認してください。";
-                 if (typeof showNotification === 'function') {
-                    showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                 }
-                 if (typeof showNotificationToast === 'function') {
-                    showNotificationToast(errorMessage, 'error'); 
-                 }
+                 // 💡 V8.5: ローカル通知関数でエラー表示
+                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                  cell.querySelector('.js-cancel-passengers-button').click();
                  return;
             }
             const currentTime = formatDate(new Date());
 
-            // ✅ API呼び出し: common.jsの5引数形式 (extraField, extraValue は null)
-            sendUpdateToServer(
-                '/api/bus/update', 
-                recordId, 
-                'passengers', 
-                newValue, 
-                null, 
-                null,
-                TARGET_TAB_ID // Tab IDを明示的に渡す
-            )
-                .then(response => {
-                    // サーバーから成功レスポンスが返された場合
-                    const success = (response && response.status === 'success');
-                    
-                    if (success) {
-                        // 成功した場合、表示値を更新し、編集モードを終了
-                        const updateTimeCell = row.querySelector('.js-update-time-field');
-                        
-                        passengersText.textContent = parsedValue + '名';
-                        passengersText.dataset.originalValue = parsedValue; 
-                        
-                        if (updateTimeCell) {
-                            // サーバーから返された時刻 (response.updateTime) を優先して使用
-                            updateTimeCell.textContent = response.updateTime || currentTime;
-                        }
-                        
-                        // 表示モードに戻す
-                        cell.classList.remove('is-editing');
-                        passengersText.style.display = 'inline';
-                        editForm.style.display = 'none';
-                        editForm.style.visibility = 'hidden'; 
-                        
-                        // 💡 スタイルをリセット
-                        editForm.style.flexDirection = '';
-                        editForm.style.alignItems = '';
-                        editForm.style.gap = '';
-                        editForm.style.maxWidth = ''; // リセット
-                        editForm.style.boxSizing = ''; // リセット
+            try {
+                // ✅ API呼び出し
+                const result = await sendUpdateToServer(
+                    '/api/bus/update', 
+                    recordId, 
+                    'passengers', 
+                    newValue, 
+                    null, 
+                    null,
+                    TARGET_TAB_ID // Tab IDを明示的に渡す
+                );
 
-                        input.style.width = ''; 
-                        input.style.MozAppearance = ''; 
-                        input.style.WebkitAppearance = ''; 
-                        input.style.margin = ''; 
+                // --- 成功時のロジック ---
+                const updateTimeCell = row.querySelector('.js-update-time-field');
                         
-                        // 🔴 修正適用: highlightRow(row) を highlightCellAndId(cell) に変更
-                        if (typeof highlightCellAndId === 'function') {
-                            highlightCellAndId(cell);
-                        }
+                passengersText.textContent = parsedValue + '名';
+                passengersText.dataset.originalValue = parsedValue; 
+                
+                if (updateTimeCell) {
+                    updateTimeCell.textContent = result.updateTime || currentTime;
+                }
+                
+                // 表示モードに戻す
+                cell.classList.remove('is-editing');
+                passengersText.style.display = 'inline';
+                editForm.style.display = 'none';
+                editForm.style.visibility = 'hidden'; 
+                
+                // 💡 スタイルをリセット
+                editForm.style.flexDirection = '';
+                editForm.style.alignItems = '';
+                editForm.style.gap = '';
+                editForm.style.maxWidth = ''; 
+                editForm.style.boxSizing = ''; 
 
-                        // 💡 common.jsの sendUpdateToServer が通知を行うため、ここではローカルの updateOperationResultField は呼び出さない
-                        
-                    } else {
-                        // サーバー側でエラーが発生した場合
-                        const errorMessage = `ID: ${recordId} - 乗車人数の更新に失敗しました: ${response.message || '不明なエラー'}`;
-                        // 🔴 修正適用: グローバル関数で通知
-                         if (typeof showNotification === 'function') {
-                            showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                         }
-                         if (typeof showNotificationToast === 'function') {
-                            showNotificationToast(errorMessage, 'error'); 
-                         }
-                        cell.querySelector('.js-cancel-passengers-button').click();
-                    }
-                })
-                .catch(error => {
-                    // 通信エラーなどの場合
-                    const errorMessage = `ID: ${recordId} - サーバーへの接続中にエラーが発生しました。`;
-                    // 🔴 修正適用: グローバル関数で通知
-                     if (typeof showNotification === 'function') {
-                        showNotification(errorMessage, 'error', TARGET_TAB_ID); 
-                     }
-                     if (typeof showNotificationToast === 'function') {
-                        showNotificationToast(errorMessage, 'error'); 
-                     }
-                    console.error('Update error:', error);
-                    cell.querySelector('.js-cancel-passengers-button').click();
-                });
+                input.style.width = ''; 
+                input.style.MozAppearance = ''; 
+                input.style.WebkitAppearance = ''; 
+                input.style.margin = ''; 
+                
+                if (typeof highlightCellAndId === 'function') {
+                    highlightCellAndId(cell);
+                }
+
+                // 💡 V8.5: ローカル通知関数でメッセージを強制表示
+                const successMessage = `ID: ${recordId} の 乗車数 を ${parsedValue}名 に更新しました。`;
+                updateOperationResultField(CONTENT_SELECTOR, true, successMessage);
+
+            } catch (error) {
+                // 失敗時のロジック
+                const errorMessage = `ID: ${recordId} - 乗車人数の更新に失敗しました: ${error.message || '不明なエラー'}`;
+                // 💡 V8.5: ローカル通知関数でエラー表示
+                updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
+                console.error('Update error:', error);
+                cell.querySelector('.js-cancel-passengers-button').click();
+            }
         });
 
 

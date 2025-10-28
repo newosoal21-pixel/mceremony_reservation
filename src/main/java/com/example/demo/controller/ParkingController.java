@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody; // 💡 追加
 
 import com.example.demo.model.Parking;
 import com.example.demo.model.ParkingStatus;
@@ -26,6 +27,8 @@ public class ParkingController {
         this.parkingStatusRepository = parkingStatusRepository;
     }
 
+    // ... (listParkings メソッドはそのまま維持) ...
+
     /**
      * 駐車場予約リスト一覧画面を表示するメソッド
      * URL: /parkings に GETリクエスト
@@ -43,5 +46,20 @@ public class ParkingController {
         
         // 2. テンプレート名 "dashboard" を返してメソッドを終了
         return "dashboard"; 
+    }
+    
+    // ==========================================================
+    // 💡 新規追加: JavaScriptからのAPIリクエストに対応するメソッド
+    // ==========================================================
+    /**
+     * 駐車場利用状況の選択肢データをJSON形式で返すAPIエンドポイント。
+     * URL: /api/parking/statuses に GETリクエスト
+     * 備考: @RequestMapping の /parkings をオーバーライドするため、フルパスで指定します。
+     */
+    @GetMapping("/api/parking/statuses")
+    @ResponseBody // 💡 これにより、List<ParkingStatus> がJSONとしてレスポンスボディに変換されます
+    public List<ParkingStatus> getParkingStatusesApi() {
+        // DBから利用状況リストをフェッチして返すだけ
+        return parkingStatusRepository.findAll();
     }
 }

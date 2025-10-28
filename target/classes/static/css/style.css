@@ -138,7 +138,8 @@
    ---------------------------------------------------- */
 .content-header {
     display: flex;
-    justify-content: space-between; /* 左右に配置 */
+    /* 修正: h2を左に、メッセージを右に寄せる */
+    justify-content: space-between;
     align-items: center; /* 垂直方向の中央揃え */
     margin-bottom: 20px;
     flex-wrap: wrap; /* モバイル対応で折り返す */
@@ -153,6 +154,10 @@
     margin-bottom: 0; /* content-headerでマージンを制御するためリセット */
     flex-shrink: 0;
     margin-right: 20px; /* 結果フィールドとの間隔 */
+    
+    /* 修正: h2の幅を内容に合わせ、メッセージ枠が広がるのを助ける */
+    width: fit-content; 
+    white-space: nowrap;
 }
 
 /* --- 固定フィールド（操作結果）のスタイル --- */
@@ -161,12 +166,18 @@
     border-radius: 4px;
     font-size: 1.3rem;
     font-weight: bold;
-    white-space: nowrap;
+    white-space: normal;
     transition: all 0.3s ease;
+	/* 修正: max-widthを100%に設定し、flex-growで幅を広げる */
+	max-width: 100% !important; 
     
     /* PC表示での配置 */
-    flex-shrink: 0;
+    flex-shrink: 1;   /* 縮小を許可 */
+    flex-grow: 1;     /* 残りのスペースを全て占有 */
     margin-top: 0; 
+    
+    /* ★修正箇所: メッセージのテキスト自体を右揃えにする */
+    text-align: right;
 }
 
 /* 通知タイプ別の色 (common.jsのnotificationクラスと連携) */
@@ -352,7 +363,7 @@
 }
 
 
-/* 備考欄の編集フォームのスタイル (右寄せ展開を強制) */
+/* 備考欄の編集フォームのスタイル (右寄せ展開に戻す) */
 .remarks-edit-form {
     position: absolute;
     top: 100%;
@@ -367,8 +378,9 @@
     
     width: 300px !important; 
 
-    right: auto !important;
-    left: calc(100% - 300px) !important; 
+    /* ★修正箇所: 右寄せ展開に戻す */
+    right: 0 !important;
+    left: auto !important; 
 
     box-sizing: border-box;
 }
@@ -544,49 +556,62 @@
 }
 
 /* ========================================================== */
-/* 📢 ★★★ トースト通知スタイル (追加) ★★★ */
+/* 📢 ★★★ トースト通知スタイル (最終修正) ★★★ */
 /* ========================================================== */
+
+/* 💡 修正追加: コンテナを画面右上に固定する */
+.notification-toast-container {
+    position: fixed; /* 画面に固定 */
+    top: 20px;       /* 画面上部から */
+    right: 20px;     /* 画面右側から */
+    z-index: 9999;   /* 他の要素の上に表示 */
+    pointer-events: none; /* クリックを透過させる */
+    display: block;
+}
+
 .notification-toast {
-    visibility: hidden; /* 初期状態では非表示 */
+    /* コンテナ内の相対配置 */
+    position: relative; 
+    
     min-width: 280px;
-    margin-left: -140px; /* min-widthの半分 */
+    margin-bottom: 10px; /* 次のトーストとの間隔 */
+    
     background-color: #333;
     color: #fff;
     text-align: center;
     border-radius: 5px;
     padding: 16px 20px;
-    position: fixed;
-    z-index: 9999; /* 最前面に表示 */
-    left: 50%; /* 中央寄せ */
-    top: 30px; /* 画面上部から30px下に配置 */
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out, top 0.5s ease-in-out; /* アニメーション設定 */
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     font-weight: bold;
     font-size: 16px;
+    
+    /* 初期表示を非表示にする設定 */
+    opacity: 0;
+    transform: translateY(0);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out; 
+    pointer-events: auto; /* トーストがクリック可能である状態に戻す */
 }
 
 /* 通知タイプ別の色 */
-.notification-success {
+.toast-success {
     background-color: #28a745; /* 緑 */
     border: 1px solid #1e7e34;
 }
 
-.notification-error {
+.toast-error {
     background-color: #dc3545; /* 赤 */
     border: 1px solid #bd2130;
 }
 
-.notification-info {
+.toast-info {
     background-color: #17a2b8; /* 青 */
     border: 1px solid #117a8b;
 }
 
-/* トーストを表示状態にするクラス */
-.notification-toast.show {
-    visibility: visible;
-    opacity: 1;
-    top: 50px; /* 少し下にスライドさせて表示 */
+/* common.js の showNotificationToast によって追加されるクラス */
+.notification-toast.fade-out {
+    opacity: 0;
+    transform: translateY(-20px); /* 上にスライドアウト */
 }
 /* ========================================================== */
 
@@ -660,6 +685,8 @@
         margin-top: 5px;
         font-size: 1.1rem;
         white-space: normal; /* 折り返しを許可 */
+        /* モバイルでも右寄せを維持 */
+        text-align: right;
     }
     /* ---------------------------------------------------- */
     
@@ -722,18 +749,8 @@
         display: none !important;
     }
 
-	/* 🔴 利用状況欄のセル (高さ計算とz-indexの起点) */
-	.excel-table td.js-parking-status,
-    .excel-table td.js-visit-situation,
-    .excel-table td.js-bus-status { /* 💡 bus-statusを追加 */
-        /* 上の td スタイルで height: auto; align-self: flex-start; を強制 */
-        overflow: visible !important; 
-        padding-bottom: 5px !important; 
-        position: relative !important; 
-	}
-    
-    /* 🔴 100%幅にしたいセル（備考欄） */
-    .excel-table td.js-remarks-field,
+	/* 🔴 100%幅にしたいセル（備考欄） */
+	.excel-table td.js-remarks-field,
     .excel-table td.js-remarks-field-visit {   /* 備考欄 */
         flex-basis: 100% !important; /* Flexboxで100%幅を確保 */
         margin-left: 0;

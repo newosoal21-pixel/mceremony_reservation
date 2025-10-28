@@ -37,9 +37,6 @@ public class SecurityConfig {
         return new SessionRegistryImpl();
     }
 
-    /**
-     * 💡 役割ベースの同時セッション制御を行うカスタム ConcurrentSessionControlStrategy
-     */
     public ConcurrentSessionControlAuthenticationStrategy concurrentSessionControlStrategy(SessionRegistry sessionRegistry) {
         
         return new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry) {
@@ -48,18 +45,15 @@ public class SecurityConfig {
             public void onAuthentication(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
                 UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-                // 権限が "ADMIN" であるかチェック
                 boolean isAdmin = userDetails.getAuthorities().stream()
                     .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN")); 
 
                 if (isAdmin) {
-                    // 管理者: 多重ログイン禁止 (最大セッション数 1)
                     this.setMaximumSessions(1);
-                    this.setExceptionIfMaximumExceeded(true); // 超過時は例外をスロー (Forbidden)
+                    this.setExceptionIfMaximumExceeded(true);
                 } else {
-                    // 一般ユーザー: 多重ログイン許可 (最大セッション数 無制限)
                     this.setMaximumSessions(-1);
-                    this.setExceptionIfMaximumExceeded(false); // 超過しても例外をスローしない
+                    this.setExceptionIfMaximumExceeded(false);
                 }
 
                 super.onAuthentication(authentication, request, response);
@@ -67,9 +61,6 @@ public class SecurityConfig {
         };
     }
     
-    /**
-     * 💡 セッション固定攻撃対策とカスタム同時セッション制御を組み合わせる
-     */
     @Bean
     public SessionAuthenticationStrategy sessionAuthenticationStrategy(SessionRegistry sessionRegistry) {
         SessionFixationProtectionStrategy fixationStrategy = new SessionFixationProtectionStrategy();
@@ -84,6 +75,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // 💡 修正: /api/ へのリクエスト（POST/PUTなど）に対してCSRF保護を無効化
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/**")
+            )
+            
             // 権限設定
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/error", "/login").permitAll()
@@ -100,15 +96,9 @@ public class SecurityConfig {
             
             // セッション管理ポリシー
             .sessionManagement(session -> session
-                // 💡 カスタム SessionAuthenticationStrategy を適用
                 .sessionAuthenticationStrategy(sessionAuthenticationStrategy(sessionRegistry())) 
-                
-                // 💡 セッション同時実行制御の有効化と SessionRegistry の登録
                 .maximumSessions(-1) 
                 .sessionRegistry(sessionRegistry()) 
-                
-                // 💡 【追加修正】セッションが超過した際の遷移先（管理者で多重ログイン時などに使用）
-                // 一般ユーザーは例外を投げないため、ここでは管理者ログイン超過時にのみ動作
                 .expiredUrl("/login?expired") 
             )
 

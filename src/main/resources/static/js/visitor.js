@@ -3,10 +3,8 @@
  * * 来館者リスト (#content2) の機能とロジック
  * * 備考欄処理 (#content1, #content2, #content3)
  * * 依存: common.js (sendUpdateToServer, formatDate, showNotification, getCheckedTabId, ...)
- * * 修正点: 
- * * 1. 更新時のハイライトを行全体から更新セルとIDセルのみに変更 (highlightCellAndId 関数を追加)
- * * 2. ハイライトの自動解除 (setTimeout) を削除し、次の更新までキープするように変更
- * * 3. 結果表示フィールドの折り返しを制御するスタイルを追加
+ * * 修正 V7: HTML側のID属性変更（th:data-record-id -> data-visit-id in <tr>）に合わせて、
+ * * レコードIDの取得方法を data-visit-id から取得するように修正しました。
  */
 
 // ------------------------------------------------------------------
@@ -39,6 +37,25 @@ function highlightCellAndId(updatedCell) {
 
     // 🔴 setTimeoutブロックを削除したため、ハイライトは次の更新まで維持されます。
 }
+
+// ------------------------------------------------------------------
+// 💡 ID取得ヘルパー関数 (V7 追加)
+// ------------------------------------------------------------------
+/**
+ * 親の<tr>からレコードIDを抽出するユーティリティ関数 (V7修正)
+ * @param {HTMLElement} element - クリックされた要素
+ * @returns {string|null} レコードID
+ */
+function getVisitorRecordId(element) {
+    const row = element.closest('tr');
+    // 💡 修正点: <tr>から data-visit-id 属性を取得する
+    const recordId = row ? row.getAttribute('data-visit-id') : null;
+    if (!recordId) {
+        console.error("エラー: 来館者レコードID (data-visit-id) が見つかりません。");
+    }
+    return recordId;
+}
+
 
 // ------------------------------------------------------------------
 // --- 既存ロジックの開始 ---
@@ -159,9 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		    const newValueId = selectElement.value; // visit_situation_id
 		    const newTextName = selectElement.options[selectElement.selectedIndex].textContent; // situationName
 		            
-		    const row = cell.closest('tr');
-		    // 💡 常に<tr>からIDを取得
-		    const visitId = row.getAttribute('data-visit-id'); 
+		    // 💡 修正 V7: ID取得をヘルパー関数に変更
+            const visitId = getVisitorRecordId(updateButton);
+            if (!visitId) {
+                updateOperationResultField('#content2', false, 'レコードIDの取得に失敗しました。');
+                return;
+            }
 
 		    // ----------------------------------------------------------------
             // 🔴 対応完了時刻 (compilationCmpTime) の更新ロジック
@@ -180,10 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		    // ----------------------------------------------------------------
 
 		    // 🔴 API呼び出し: Visitor APIを使用
-		    // 💡 備考欄と異なり、来館状況の更新はextraField/extraValueの4番目、5番目の引数が必要
-		    sendUpdateToServer('/api/visitor/update', visitId, 'visitSituation', newValueId, extraField, extraValue) 
+		    // 💡 common.js の sendUpdateToServer を使用
+		    sendUpdateToServer('/api/visitor/update', visitId, 'visitSituation', newValueId, extraField, extraValue, 'tab2') 
 		          .then(() => {
 		            
+		              const row = cell.closest('tr');
 		              const updateTimeField = row.querySelector('.js-update-time-field');
 		              const cmpTimeField = row.querySelector('.js-compilation-cmp-time-field');
 		              
@@ -286,10 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	        updateClass = '.update-remarks-button'; // (content1と共有)
 	        cancelClass = '.cancel-remarks-button'; // (content1と共有)
 	        apiPath = '/api/bus/update'; 
-	        // HTML側の修正に基づき、<tr>の属性からIDを取得するように統一
-	        // 🚨 HTMLに 'data-bus-id' 属性がないため、ここでは暫定的にIDセルから取得するロジックを検討する必要があるが、
-            // 🚨 ご提示のコードでは row.getAttribute('data-bus-id') を前提としているため、そのまま維持する。
-            // 🚨 (HTML側の busReservation <tr th:each> に data-bus-id を追加するのが最善)
 	        recordIdAttribute = 'data-bus-id'; 
 	        contentSelector = '#content3'; // 💡 タブ3
 	    } else {
@@ -336,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	        
 	        const newRemarks = textarea.value;
 	        
-	        // 💡 常に<tr>の属性からIDを取得する
+	        // 💡 修正 V7: 常に<tr>の属性からIDを取得する
 	        let finalRecordId = row.getAttribute(recordIdAttribute);
 	        
 	        // IDが取得できているかチェック
@@ -349,8 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	        const fieldName = 'remarksColumn';
 	        
 	        // 💡 common.js の sendUpdateToServer を使用
-	        // 備考欄の更新はextraField/extraValueは不要
-	        sendUpdateToServer(apiPath, finalRecordId, fieldName, newRemarks)
+	        sendUpdateToServer(apiPath, finalRecordId, fieldName, newRemarks, null, null, contentSelector.replace('#content', 'tab'))
 	            .then(() => {
 	                // 成功した場合のみDOMを更新
 	                textSpan.textContent = newRemarks;
@@ -402,5 +418,82 @@ document.addEventListener('DOMContentLoaded', () => {
 	        textSpan.style.visibility = 'visible';
 	    });
 	});
+
+    // ------------------------------------------------------------------
+    // D. リモート更新後のDOM操作関数 (common.jsのhandleRemoteUpdateから呼び出される)
+    // ------------------------------------------------------------------
+
+    // 💡 common.jsから呼び出されるグローバル関数として定義
+    window.updateVisitorRow = function(id, fieldName, newValue, updateTime) {
+        console.log(`DEBUG: updateVisitorRow called for ID ${id}, Field: ${fieldName}`);
+        
+        // IDが一致する行を検索
+        const row = document.querySelector(`#content2 tr[data-visit-id="${id}"]`);
+        if (!row) {
+            console.warn(`WARN: Visitor row with ID ${id} not found for remote update.`);
+            return;
+        }
+
+        // 最終更新日時を更新
+        const updateTimeCell = row.querySelector('.js-update-time-field');
+        if (updateTimeCell) {
+            updateTimeCell.textContent = updateTime;
+        }
+
+        let targetCell;
+        
+        switch (fieldName) {
+            case 'visitSituation':
+                targetCell = row.querySelector('.js-visit-situation');
+                if (targetCell) {
+                    // IDを更新
+                    targetCell.setAttribute('data-situation-id', newValue);
+                    
+                    // ステータス名（テキスト）を取得し更新 (newValueを基にローカルで探すか、HTMLに依存)
+                    const selectElement = targetCell.querySelector('.situation-select');
+                    let newStatusName = '更新済み'; // デフォルト値
+
+                    if (selectElement) {
+                        const option = Array.from(selectElement.options).find(opt => String(opt.value) === String(newValue));
+                        if (option) {
+                            newStatusName = option.textContent;
+                        }
+                    }
+                    
+                    const viewMode = targetCell.querySelector('.view-mode-text');
+                    if (viewMode) viewMode.textContent = newStatusName;
+
+                    // 対応完了時刻の更新 (newValueが完了IDなら、updateTimeを適用)
+                    if (COMPLETED_SITUATION_IDS.includes(String(newValue))) {
+                         const cmpTimeField = row.querySelector('.js-compilation-cmp-time-field');
+                         if (cmpTimeField) cmpTimeField.textContent = updateTime;
+                    } else {
+                         // 完了ステータスでない場合は時刻をクリアするロジックが必要な場合がある
+                         // 例: cmpTimeField.textContent = '';
+                    }
+                }
+                break;
+                
+            case 'remarksColumn':
+                targetCell = row.querySelector('.js-remarks-field-visit');
+                if (targetCell) {
+                    const viewText = targetCell.querySelector('.remarks-text');
+                    const textarea = targetCell.querySelector('.remarks-textarea');
+                    if (viewText) viewText.textContent = newValue;
+                    if (textarea) textarea.value = newValue; 
+                }
+                break;
+
+            default:
+                console.warn(`WARN: Remote update field ${fieldName} not handled in visitor.js.`);
+                return; 
+        }
+
+        // 更新されたセルとIDをハイライト
+        if (targetCell && typeof highlightCellAndId === 'function') {
+            highlightCellAndId(targetCell);
+        }
+    };
+
 
 }); // DOMContentLoaded の閉じ
