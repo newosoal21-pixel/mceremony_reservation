@@ -498,5 +498,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 	} // busTableBody の if の閉じ
+	
+	// bus.js のコードの最後に追加してください。
+
+	/**
+	 * リモートから受け取った更新データに基づき、送迎バスリストの画面表示を更新する。
+	 * この関数は common.js の handleRemoteUpdate から 'bus' エンティティの更新時に呼び出されます。
+	 * * NOTE: common.js の更新メッセージに 'newText', 'emptyBusDepTime', 'departureTime' が含まれるか不明なため、
+	 * 今回は必要なデータをローカルで取得/生成して更新します。
+	 * * @param {string} id - 更新されたレコードID (data-bus-id)
+	 * @param {string} field - 更新されたフィールド名 (e.g., 'busSituation', 'passengers')
+	 * @param {string} newValue - 更新後のIDまたは値 (e.g., '101', '5')
+	 * @param {string} updateTime - 更新時刻 (e.g., '2025/10/29 14:30:00')
+	 */
+	window.updateBusRow = function(id, field, newValue, updateTime) {
+	    console.log(`DEBUG: Remote update received for Bus ID ${id}. Field: ${field}, Value: ${newValue}`);
+
+	    const row = document.querySelector(`#content3 tr[data-bus-id="${id}"]`);
+	    if (!row) {
+	        console.warn(`WARN: Bus Record ID ${id} not found for remote update.`);
+	        return;
+	    }
+
+	    let targetCell;
+	    let newDisplayValue = newValue; // デフォルト値
+
+	    // ------------------------------------------
+	    // 1. セル値の更新
+	    // ------------------------------------------
+	    if (field === 'busSituation') {
+	        targetCell = row.querySelector('.js-bus-status');
+	        
+	        // 💡 サーバーから送られたnewValue(ID)に基づき、表示テキスト（日本語名）をローカルデータから検索
+	        const situation = busSituationsData.find(s => String(s.id) === String(newValue));
+	        if (situation) {
+	            newDisplayValue = situation.name;
+	        } else {
+	             console.warn(`WARN: Bus situation ID ${newValue} not found in local data.`);
+	        }
+	        
+	        if (targetCell) {
+	            targetCell.querySelector('.view-mode-text').textContent = newDisplayValue;
+	            targetCell.setAttribute('data-status-id', newValue); // IDも更新
+	            
+	            // 付随する時刻フィールドの更新 (乗車出発済/下車出発済の場合)
+	            const currentTime = updateTime.split(' ')[1] || ''; // 時刻部分を取得（例: 14:30:00）
+	            if (newDisplayValue === '下車出発済') {
+	                row.querySelector('.js-emptybus-dep-time-field').textContent = currentTime;
+	            } else if (newDisplayValue === '乗車出発済') {
+	                // 乗車出発時刻のセルセレクタ (例: td:nth-child(7)) が正確であることを確認
+	                row.querySelector('td:nth-child(7)').textContent = currentTime; 
+	            }
+	        }
+
+	    } else if (field === 'passengers') {
+	        targetCell = row.querySelector('.js-passengers-field');
+	        newDisplayValue = newValue;
+	        
+	        if (targetCell) {
+	            // 表示は '5名' の形式
+	            targetCell.querySelector('.passengers-text').textContent = newDisplayValue + '名';
+	            // オリジナル値のデータ属性も更新
+	            targetCell.querySelector('.passengers-text').dataset.originalValue = newDisplayValue; 
+	        }
+	        
+	    } else {
+	        console.warn(`WARN: Remote update for unhandled field: ${field}`);
+	        return;
+	    }
+
+	    // ------------------------------------------
+	    // 2. 最終更新時刻の更新
+	    // ------------------------------------------
+	    if (updateTime) {
+	        row.querySelector('.js-update-time-field').textContent = updateTime.split(' ')[1]; // 時刻部分のみ表示
+	    }
+
+	    // ------------------------------------------
+	    // 3. ハイライトの実行
+	    // ------------------------------------------
+	    if (targetCell && typeof highlightCellAndId === 'function') {
+	        // common.js の highlightCellAndId を呼び出す
+	        highlightCellAndId(targetCell); 
+	        
+	        // ローカル通知メッセージを表示
+	        const successMessage = `リモート更新：ID ${id} の ${field} を ${newDisplayValue} に更新しました。`;
+	        // updateOperationResultField は bus.js 内で定義されているはず
+	        if (typeof updateOperationResultField === 'function') {
+	             updateOperationResultField(CONTENT_SELECTOR, true, successMessage);
+	        }
+	    }
+	};
+
+	// ... (fetchBusSituations 関数がこの関数より先に実行され、busSituationsData がロードされている必要があります)
 
 }); // DOMContentLoaded の閉じ
