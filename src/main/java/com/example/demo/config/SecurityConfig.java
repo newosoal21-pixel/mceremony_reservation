@@ -3,17 +3,12 @@ package com.example.demo.config;
 import java.util.Arrays;
 import java.util.List;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -36,38 +31,26 @@ public class SecurityConfig {
     public SessionRegistry sessionRegistry() {
         return new SessionRegistryImpl();
     }
-
-    public ConcurrentSessionControlAuthenticationStrategy concurrentSessionControlStrategy(SessionRegistry sessionRegistry) {
-        
-        return new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry) {
-            
-            @Override
-            public void onAuthentication(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
-                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
-                boolean isAdmin = userDetails.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN")); 
-
-                if (isAdmin) {
-                    this.setMaximumSessions(1);
-                    this.setExceptionIfMaximumExceeded(true);
-                } else {
-                    this.setMaximumSessions(-1);
-                    this.setExceptionIfMaximumExceeded(false);
-                }
-
-                super.onAuthentication(authentication, request, response);
-            }
-        };
+    
+    // ADMINユーザー専用のセッション制御ストラテジー
+    @Bean
+    public ConcurrentSessionControlAuthenticationStrategy concurrentSessionControlStrategyAdmin(SessionRegistry sessionRegistry) {
+        // ADMINユーザー専用: 最大セッション数を 1 に制限
+        ConcurrentSessionControlAuthenticationStrategy strategy = 
+            new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry);
+        strategy.setMaximumSessions(1);
+        strategy.setExceptionIfMaximumExceeded(true); 
+        return strategy;
     }
     
     @Bean
     public SessionAuthenticationStrategy sessionAuthenticationStrategy(SessionRegistry sessionRegistry) {
         SessionFixationProtectionStrategy fixationStrategy = new SessionFixationProtectionStrategy();
         
+        // ADMIN制御ストラテジーのみを追加 (一般ユーザーは制限なし)
         List<SessionAuthenticationStrategy> strategies = Arrays.asList(
             fixationStrategy, 
-            concurrentSessionControlStrategy(sessionRegistry)
+            concurrentSessionControlStrategyAdmin(sessionRegistry)
         );
         return new CompositeSessionAuthenticationStrategy(strategies);
     }
@@ -75,14 +58,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // 💡 修正: /api/ へのリクエスト（POST/PUTなど）に対してCSRF保護を無効化
+            // CSRF設定
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/**")
             )
             
             // 権限設定
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/error", "/login").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/error", "/login", "/ws/**").permitAll()
                 .anyRequest().authenticated()
             )
             
@@ -96,10 +79,9 @@ public class SecurityConfig {
             
             // セッション管理ポリシー
             .sessionManagement(session -> session
+                // 💡 修正点: sessionAuthenticationStrategy のみ設定
                 .sessionAuthenticationStrategy(sessionAuthenticationStrategy(sessionRegistry())) 
-                .maximumSessions(-1) 
-                .sessionRegistry(sessionRegistry()) 
-                .expiredUrl("/login?expired") 
+                .invalidSessionUrl("/login?expired") // 💡 修正点: expiredUrl を invalidSessionUrl に変更
             )
 
             // ログアウト設定

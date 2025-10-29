@@ -1,15 +1,7 @@
 /**
  * common.js
  * 複数のタブ (駐車場、来館者、バス) で共通して使用される機能を提供します。
- * 主な機能:
- * 1. WebSocket (STOMP/SockJS) 接続と通知処理
- * 2. サーバーへのデータ更新APIの呼び出し (sendUpdateToServer)
- * 3. UIの通知表示 (showNotification, showNotificationToast)
- * 4. UIのハイライト処理
- * 5. 日付フォーマット
- *
- * 修正 V7.9: sendUpdateToServer の成功時通知において、サーバーレスポンスに message フィールドが
- * 存在しない場合にフォールバックメッセージ（IDとフィールド名を含む）を強制的に表示するように修正。
+ * * 修正 V8.7: リモート通知時のトースト表示とタブ連動、固定更新情報表示の欠落を修正。
  */
 
 // ==========================================================
@@ -23,20 +15,17 @@ let stompClient = null;
  */
 function connect() {
     console.log("DEBUG: Attempting to connect to WebSocket...");
-    // 💡 エンドポイントは WebSocketConfig.java で /ws に設定されている前提
     const socket = new SockJS('/ws'); 
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, (frame) => {
         console.log('DEBUG: STOMP Connection established: ' + frame);
         
-        // サーバーから /topic/updates トピックを購読
         stompClient.subscribe('/topic/updates', (message) => {
             handleRemoteUpdate(message.body);
         });
 
     }, (error) => {
-        // 接続失敗時のエラーハンドリング
         console.error('DEBUG: STOMP Connection Error:', error);
         
         const errorMessage = 'サーバーとの接続が切れました。自動再接続を試みます...';
@@ -44,7 +33,6 @@ function connect() {
             showNotificationToast(errorMessage, 'warning');
         }
         
-        // 💡 5秒後に再接続を試みる
         setTimeout(connect, 5000); 
     });
 }
@@ -54,23 +42,48 @@ function connect() {
  * @param {string} updateMessageJson - JSON文字列形式の更新メッセージ
  */
 function handleRemoteUpdate(updateMessageJson) {
+    // 🔴 【修正適用開始】
+    // entityTypeに対応する日本語名称を定義する（関数スコープ内）
+    const entityNameMap = {
+        'parking': '駐車場利用ID',
+        'visitor': '来館者ID',
+        'bus': '送迎バス運行ID'
+    };
+    
     try {
         const update = JSON.parse(updateMessageJson);
+        // サーバーからの更新メッセージには updateTime が含まれることを想定
         const { id, field, newValue, extraField, extraValue, updateTime, entityType, message } = update;
         
         if (!id || !field || !entityType) {
             console.warn("WARN: Invalid remote update message received:", update);
             return;
         }
+
+        // 日本語名称を取得。見つからない場合は entityType をそのまま使う
+        const entityNameJp = entityNameMap[entityType] || entityType.toUpperCase();
+
+        // プレフィックスを日本語名称とIDで作成
+        const prefix = `${entityNameJp}: ${id} - `;
+        const baseMessage = message || `${field} が更新されました。`;
+        const notificationMessage = prefix + baseMessage;
         
-        // 💡 トーストで通知
+        // 1. 💡 修正追加: タブ連動 (リモート更新されたタブに切り替える)
+        if (typeof setActiveTab === 'function') {
+            setActiveTab(entityType);
+        }
+        
+        // 2. 💡 修正追加: 固定更新情報メッセージを表示 (remoteValueはupdateTimeを使用)
+        if (typeof updateLastOperationResult === 'function') {
+            updateLastOperationResult(entityType, notificationMessage, updateTime, 'info'); 
+        }
+
+        // 3. トーストで通知
         if (typeof showNotificationToast === 'function') {
-             // messageフィールドが存在すればそれを使用する
-             const notificationMessage = message || `${entityType} ID: ${id} の ${field} が更新されました。`;
              showNotificationToast(notificationMessage, 'info');
         }
         
-        // 💡 各モジュールに定義されたDOM更新関数を呼び出す
+        // 4. 各モジュールに定義されたDOM更新関数を呼び出す
         if (entityType === 'parking' && typeof window.updateParkingRow === 'function') {
             window.updateParkingRow(id, field, newValue, extraField, extraValue, updateTime);
             
@@ -85,6 +98,7 @@ function handleRemoteUpdate(updateMessageJson) {
         console.error("ERROR: Failed to process remote update message:", error);
     }
 }
+// 🔴 【修正適用終了】
 
 // ページロード時にWebSocket接続を開始
 document.addEventListener('DOMContentLoaded', connect);
@@ -100,70 +114,54 @@ document.addEventListener('DOMContentLoaded', connect);
  * @param {string} id - 更新するレコードのID
  * @param {string} field - 更新するフィールド名 (例: parkingStatus)
  * @param {string} value - 新しい値 (例: 101, '新ナンバー')
- * @param {string|null} extraField - 同時に更新する追加フィールド名 (例: departureTime)
+ * @param {string|null} extraField - 同時に更新する追加フィールド名
  * @param {string|null} extraValue - 追加フィールドの値
  * @param {string} tabId - 通知を表示するタブID
  * @returns {Promise<Object>} - 成功時のレスポンスボディ
  */
 async function sendUpdateToServer(endpoint, id, field, value, extraField, extraValue, tabId) {
-    // 1. CSRFトークン情報の取得 (POSTリクエストには必須)
     const token = document.querySelector('meta[name="_csrf"]')?.content;
     const headerName = document.querySelector('meta[name="_csrf_header"]')?.content;
 
-    // 2. リクエストボディの構築
     const payload = {
         id: String(id),
         field: field,
         value: value,
-        extraField: extraField || '', // nullを空文字列に変換
-        extraValue: extraValue || '' // nullを空文字列に変換
+        extraField: extraField || '', 
+        extraValue: extraValue || ''
     };
 
-    // 3. ヘッダーの構築
     const headers = {
-        // 💡 JSONボディを送信するために Content-Type を設定
         'Content-Type': 'application/json', 
     };
     if (headerName && token) {
-        headers[headerName] = token; // CSRFヘッダーの追加
+        headers[headerName] = token; 
     }
     
-    // ログ出力（デバッグ用）
     console.log(`DEBUG: API Call to ${endpoint}. Payload:`, payload);
 
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: headers,
-            // 💡 ペイロードをJSON文字列に変換
             body: JSON.stringify(payload) 
         });
         
-        // 4. エラー処理
-        if (response.status === 400 || response.status === 404 || response.status === 500) {
-            // サーバーからの詳細なエラーメッセージを取得
+        if (!response.ok) {
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorBody = await response.json();
                 errorMessage = errorBody.message || errorMessage;
             } catch (e) {
-                // JSON解析に失敗した場合（例：HTMLエラーページが返された）
                 console.warn("WARN: Failed to parse error response body as JSON.", e);
             }
-            // エラーをスローして呼び出し元でキャッチさせる
             throw new Error(`入力エラーが発生しました: ${errorMessage}`);
-        }
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const result = await response.json();
         
         if (result.status === 'success') {
-             // 成功通知（showNotificationToast関数が存在することを前提とする）
              if (typeof showNotificationToast === 'function') {
-                // 💡 修正 V7.9: result.message が存在しない場合のフォールバックメッセージを追加
                 const defaultMessage = `ID: ${id} の ${field} を更新しました。`; 
                 const notificationMessage = result.message || defaultMessage;
                  
@@ -171,20 +169,18 @@ async function sendUpdateToServer(endpoint, id, field, value, extraField, extraV
              }
              return result; 
         } else {
-             // status: 'error' など、APIで定義されたエラー
              throw new Error(result.message || 'サーバー側で処理エラーが発生しました。');
         }
 
     } catch (error) {
         console.error("sendUpdateToServer Error:", error);
-        // 呼び出し元にエラーを再スロー
         throw error;
     }
 }
 
 
 // ==========================================================
-// III. ユーティリティ関数
+// III. ユーティリティ関数 (欠落していた関数の補完を含む)
 // ==========================================================
 
 /**
@@ -193,6 +189,9 @@ async function sendUpdateToServer(endpoint, id, field, value, extraField, extraV
  * @returns {string} フォーマットされた日付文字列
  */
 function formatDate(date) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return '';
+    }
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -202,6 +201,65 @@ function formatDate(date) {
     return `${year}/${month}/${day} ${hours}:${minutes}`;
 }
 
+/**
+ * 💡 修正追加: 該当するエンティティタイプ（シート）にタブを切り替える
+ * @param {string} entityType - 'parking', 'visitor', 'bus'
+ */
+function setActiveTab(entityType) {
+    let radioId;
+    if (entityType === 'parking') {
+        radioId = 'tab1'; 
+    } else if (entityType === 'visitor') {
+        radioId = 'tab2'; 
+    } else if (entityType === 'bus') {
+        radioId = 'tab3'; 
+    } else {
+        return;
+    }
+    
+    console.log(`DEBUG: Calling setActiveTab(${entityType}) -> radioId: ${radioId}`);
+
+    const radioElement = document.getElementById(radioId);
+    if (radioElement && !radioElement.checked) {
+        // ラジオボタンをチェックすることでCSS/HTMLが連動してタブが切り替わる
+        radioElement.checked = true; 
+        console.log(`DEBUG: Tab changed to ${radioId}.`);
+    }
+}
+
+
+/**
+ * 💡 修正追加: 各タブの .last-operation-result フィールドを更新する（固定更新情報メッセージ）
+ * @param {string} entityType - 'parking', 'visitor', 'bus'
+ * @param {string} message - 表示するメッセージ
+ * @param {string} updateTime - 更新日時 (YYYY/MM/DD HH:mm 形式)
+ * @param {string} type - 'success', 'error', 'info'
+ */
+function updateLastOperationResult(entityType, message, updateTime, type = 'info') {
+    let contentId;
+    if (entityType === 'parking') {
+        contentId = 'content1'; 
+    } else if (entityType === 'visitor') {
+        contentId = 'content2'; 
+    } else if (entityType === 'bus') {
+        contentId = 'content3'; 
+    } else {
+        return;
+    }
+
+    const resultField = document.querySelector(`#${contentId} .last-operation-result`);
+    if (resultField) {
+        // クラスをリセットし、新しいタイプを適用 (CSSで .notification-info, .notification-success などに対応していること)
+        resultField.className = 'last-operation-result';
+        resultField.classList.add(`notification-${type}`);
+        
+        // メッセージを設定 (updateTimeはサーバーから来たそのままの値を使用)
+        resultField.textContent = `${updateTime || formatDate(new Date())}：${message} `;
+        
+        console.log(`DEBUG: Updated operation result for ${entityType}.`);
+    }
+}
+
 
 /**
  * ページ上部に固定で表示される通知 (トースト)
@@ -209,21 +267,26 @@ function formatDate(date) {
  * @param {string} type - 'success', 'error', 'info', 'warning'
  */
 function showNotificationToast(message, type = 'info') {
+    // 💡 IDで検索。HTMLで <div id="notification-toast-container"> が定義されている必要があります。
     const toastContainer = document.getElementById('notification-toast-container');
-    if (!toastContainer || !message) { // 💡 メッセージが空の場合は表示しない
+    
+    if (!toastContainer || !message) { 
         console.warn("WARN: showNotificationToast called with empty message or missing container.");
         return;
     }
 
     const toast = document.createElement('div');
-    toast.className = `notification-toast toast-${type}`;
+    // CSSクラス: notification-toast と toast-success/error/info の両方を適用
+    toast.className = `notification-toast toast-${type}`; 
     toast.textContent = message;
 
-    toastContainer.appendChild(toast);
+    // トーストをコンテナの先頭に追加 (新しい通知が上に来るように)
+    toastContainer.prepend(toast); 
 
     // 3秒後に消えるように設定
     setTimeout(() => {
-        toast.classList.add('fade-out');
+        // フェードアウトのクラスを追加
+        toast.classList.add('fade-out'); 
         // アニメーション完了後にDOMから削除
         toast.addEventListener('transitionend', () => toast.remove());
     }, 3000);
@@ -231,16 +294,15 @@ function showNotificationToast(message, type = 'info') {
 
 
 /**
- * 画面内の特定タブの上部に表示される永続的な通知
+ * 古いバージョンの永続的な通知表示関数 (現在は updateLastOperationResult が推奨される)
  * @param {string} message - 表示するメッセージ
  * @param {string} type - 'success', 'error', 'info'
  * @param {string} targetTabId - 通知を表示するタブのID (例: 'tab1')
  */
 function showNotification(message, type, targetTabId) {
     const tabContent = document.getElementById(targetTabId);
-    if (!tabContent || !message) return; // 💡 メッセージが空の場合は表示しない
+    if (!tabContent || !message) return;
     
-    // 既存の通知エリアを取得または作成
     let notificationArea = tabContent.querySelector('.notification-area');
     if (!notificationArea) {
         notificationArea = document.createElement('div');
@@ -248,16 +310,15 @@ function showNotification(message, type, targetTabId) {
         tabContent.insertBefore(notificationArea, tabContent.firstChild);
     }
     
-    // 既存のメッセージを削除
     notificationArea.innerHTML = ''; 
 
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`; // CSSで alert-success, alert-error などに対応
+    alertDiv.className = `alert alert-${type}`; 
     alertDiv.textContent = message;
 
     notificationArea.appendChild(alertDiv);
 
-    // 💡 10秒後に自動的に消えるように設定
+    // 10秒後に自動的に消えるように設定
     setTimeout(() => {
         notificationArea.innerHTML = ''; 
     }, 10000);

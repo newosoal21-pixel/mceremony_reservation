@@ -8,6 +8,7 @@ com\example\demo\controller\BusApiController.class
 com\example\demo\controller\VisitApiController.class
 com\example\demo\model\Parking.class
 com\example\demo\controller\EmployeeController.class
+com\example\demo\dto\NotificationDto.class
 com\example\demo\model\BusSituation.class
 com\example\demo\service\CsvService.class
 com\example\demo\config\SecurityConfig.class
@@ -27,11 +28,13 @@ com\example\demo\repository\ParkingStatusRepository.class
 META-INF\maven\com.example\clemony_reservation\pom.xml
 com\example\demo\model\Visitor.class
 com\example\demo\controller\CombinedListController.class
+com\example\demo\service\UpdateNotificationService.class
 com\example\demo\controller\DataImportController.class
 META-INF\maven\com.example\clemony_reservation\pom.properties
 com\example\demo\repository\VisitSituationRepository.class
+com\example\demo\config\WebSocketConfig.class
 com\example\demo\Testpass.class
 com\example\demo\model\ParkingStatus.class
-com\example\demo\config\SecurityConfig$1.class
 com\example\demo\config\LoginSuccessHandler.class
+com\example\demo\model\RemoteUpdateMessage.class
 com\example\demo\model\ShuttleBusReservation.class
