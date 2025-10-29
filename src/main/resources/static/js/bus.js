@@ -1,11 +1,11 @@
 /**
  * bus.js
  * * 送迎バス運行リスト (#content3) の機能とロジック
- * * 依存: common.js (sendUpdateToServer, formatDate, showNotificationToast, showNotification, highlightCellAndId)
- * * 修正 V8.5:
- * * 1. ローカル通知関数 (updateOperationResultField) を追加。
- * * 2. 入出庫状況、乗車数の更新成功時、このローカル通知関数を強制的に呼び出すロジックを追加し、
- * * メッセージが表示されない問題を解決する。
+ * * 修正 V9.3 (最終版):
+ * * 1. 乗車数（js-passengers-field）の編集モードの表示・位置制御を、
+ * * **JavaScriptによるスタイル強制** にて実装。これにより、PC表示時の位置ずれを回避し、
+ * * セルの真下にボタンが縦並びで表示されることを目指す。
+ * * 2. HTML側の <td>.js-passengers-field に style="position: relative;" が適用されていることが前提。
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,16 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const busContent = document.getElementById('content3');
     if (!busContent) return; // タブ3がない場合は終了
 
-    // 💡 ターゲットタブIDとセレクタを定義 (V8.5: 追加)
+    // 💡 ターゲットタブIDとセレクタを定義
     const TARGET_TAB_ID = 'tab3';
     const CONTENT_SELECTOR = '#content3';
     
     // ------------------------------------------------------------------
-    // 💡 ID取得ヘルパー関数 (V7 追加)
+    // 💡 ID取得ヘルパー関数
     // ------------------------------------------------------------------
     function getBusRecordId(element) {
         const row = element.closest('tr');
-        // 💡 修正点: <tr>から data-bus-id を取得するように変更
         const recordId = row ? row.getAttribute('data-bus-id') : null; 
         if (!recordId) {
             console.error("エラー: 送迎バスレコードID (data-bus-id) が見つかりません。");
@@ -33,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 	// ------------------------------------------------------------------
-	// 💡 ローカル通知関数 (V8.5: 追加)
+	// 💡 ローカル通知関数 (common.jsの関数を強制実行)
 	// ------------------------------------------------------------------
     const RESULT_FIELD_IDS = {
         '#content3': "last-operation-result-tab3"
@@ -56,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const resultSpan = resultDiv ? resultDiv.querySelector('span') : null;
 
         if (resultDiv) {
-            // 見栄え調整
             resultDiv.style.minWidth = '250px';      
             resultDiv.style.maxWidth = '300px';      
             resultDiv.style.wordWrap = 'break-word'; 
@@ -69,12 +67,11 @@ document.addEventListener('DOMContentLoaded', () => {
             resultSpan.style.fontWeight = 'bold';
         }
 
-         // 💡 common.js の showNotificationToast を使ってトースト表示を強制実行
+         // common.js の showNotificationToast を使ってトースト表示を強制実行
          if (typeof showNotificationToast === 'function') {
              showNotificationToast(message, success ? 'success' : 'error');
          } else {
              console.warn("common.js の showNotificationToast 関数が見つかりません。");
-             // 失敗時のみ共通の showNotification にフォールバック
              if (typeof showNotification === 'function' && !success) {
                  showNotification(message, 'error', TARGET_TAB_ID);
              }
@@ -83,10 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 	// ==========================================================
-	// 1. データストア: 取得した状況データを保持する変数
+	// 1. データストアと初期化
 	// ==========================================================
 	let busSituationsData = []; 
-    const busTableBody = document.querySelector('#content3 .excel-table tbody'); // テーブルボディをここで取得
+    const busTableBody = document.querySelector('#content3 .excel-table tbody'); 
 
 	// ==========================================================
 	// 2. データの取得: ページロード時にAPIから状況リストを取得する関数
@@ -94,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	async function fetchBusSituations() {
 	    console.log("DEBUG: fetchBusSituations関数が実行されました。APIを呼び出します。");
 	    try {
-	        // CSRFトークンは sendUpdateToServer ではなく、直接 fetch に渡す必要がある
             const token = document.querySelector('meta[name="_csrf"]')?.content;
             const headerName = document.querySelector('meta[name="_csrf_header"]')?.content;
 
@@ -113,12 +109,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	        console.error("DEBUG: Failed to fetch bus situations:", error);
 	        
             const errorMessage = '入出庫状況の選択肢データをロードできませんでした。';
-            // 💡 V8.5: ローカル通知関数でエラー表示
             updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
 	    }
 	}
     
-	// 💡 ページロード時にデータ取得を開始
 	fetchBusSituations();
 
 	// ==========================================================
@@ -130,22 +124,35 @@ document.addEventListener('DOMContentLoaded', () => {
 	 * @param {HTMLElement} selectElement - <select class="js-bus-situation-select"> 要素
 	 */
 	function populateBusStatusSelect(selectElement) {
-	    // 既存のオプションをクリア
 	    selectElement.innerHTML = ''; 
-
-	    // ユーザーに選択を促すための最初の空オプション
 	    const defaultOption = document.createElement('option');
 	    defaultOption.value = '';
 	    defaultOption.textContent = '選択してください';
 	    selectElement.appendChild(defaultOption);
 
-	    // 取得したデータに基づいてオプションを生成
 	    busSituationsData.forEach(situation => {
 	        const option = document.createElement('option');
 	        option.value = situation.id;      
-	        option.textContent = situation.name; // Nameを表示名として使用
+	        option.textContent = situation.name; 
 	        selectElement.appendChild(option);
 	    });
+	}
+
+    /**
+	 * 乗車人数セレクタ (<select>) に 0～50 の <option> タグを生成して挿入する
+	 * @param {HTMLElement} selectElement - <select class="riders-select"> 要素
+	 */
+	function populateRidersSelect(selectElement) {
+	    selectElement.innerHTML = ''; 
+
+	    // 0から50までのオプションを生成
+	    for (let i = 0; i <= 50; i++) {
+	        const option = document.createElement('option');
+	        const valueText = String(i);
+	        option.value = valueText;      
+	        option.textContent = valueText; 
+	        selectElement.appendChild(option);
+	    }
 	}
     
     
@@ -159,10 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // A. 編集モードに切り替えるイベント委譲 (クリック)
         // ==========================================================
         
-        // 1. 入出庫状況 (クリック) (省略)
+        // 1. 入出庫状況 (クリック) - CSSに表示制御を委ねる 
 	    busTableBody.addEventListener('click', (e) => {
             const cell = e.target.closest('.js-bus-status');
-            if (e.target.closest('.js-passengers-field')) return;
+            // 乗車数のクリックと競合しないようにする
+            if (e.target.closest('.js-passengers-field')) return; 
 	        if (!cell || e.target.closest('button')) return;
 	        if (cell.classList.contains('is-editing')) return;
 	        
@@ -179,64 +187,65 @@ document.addEventListener('DOMContentLoaded', () => {
 	        cell.classList.add('is-editing');
 
 	        const viewMode = cell.querySelector('.view-mode-text');
-	        if(viewMode) viewMode.style.display = 'none';
-	        if(editMode) editMode.style.display = 'block';
-
+	        // JSによる表示制御はCSSに委ねる
+            
 	        if(selectElement) selectElement.focus();
 	    });
         
-        // 2. 乗車数 (シングルクリック) (省略)
+        // 2. 乗車数 (セレクタ方式) - 💡 修正: スタイルをJSで強制的に付与し、意図した位置に表示させる
         busTableBody.addEventListener('click', (e) => {
             const cell = e.target.closest('.js-passengers-field');
             if (!cell || e.target.closest('button')) return; 
             if (cell.classList.contains('is-editing')) return;
-            if (busContent.querySelector('.js-passengers-field.is-editing, .js-bus-status.is-editing')) return;
             
-            const passengersText = cell.querySelector('.passengers-text');
-            const editForm = cell.querySelector('.passengers-edit-form');
-            const input = cell.querySelector('.passengers-input');
-
-            if (!passengersText || !editForm || !input) {
-                 console.error("DEBUG ERROR: 乗車数の必須要素が見つかりません。HTMLのクラス名を確認してください。");
+            const viewMode = cell.querySelector('.passengers-text');
+            const editMode = cell.querySelector('.edit-mode-select'); 
+            const selectElement = cell.querySelector('.riders-select'); 
+            
+            if (!viewMode || !editMode || !selectElement) {
+                 console.error("DEBUG ERROR: 乗車数の必須要素(View/Edit/Select)が見つかりません。HTMLのクラス名を確認してください。");
                  return; 
             }
             
-            let currentValue = passengersText.textContent.replace('名', '').trim();
-            if (currentValue === '') {
-                currentValue = passengersText.dataset.originalValue || '';
+            if (selectElement) {
+                populateRidersSelect(selectElement); 
+                
+                let originalRidersValue = cell.querySelector('.passengers-text').dataset.originalValue;
+                if (!originalRidersValue) {
+                    originalRidersValue = cell.querySelector('.passengers-text').textContent.replace('名', '').trim();
+                }
+                if (originalRidersValue) selectElement.value = originalRidersValue;
             }
-            input.value = currentValue;
-
-            // 🚀 スタイルの調整
-            input.style.width = '100%'; 
-            input.style.MozAppearance = 'textfield';        
-            input.style.WebkitAppearance = 'none';          
-            input.style.margin = '0';                       
 
             cell.classList.add('is-editing');
             
-            passengersText.style.display = 'none';
-            editForm.style.display = 'block'; 
-            editForm.style.visibility = 'visible'; 
+            viewMode.style.display = 'none';
+
+            // 💡 修正: JSで編集フィールドの表示と位置を強制制御する
+            editMode.style.display = 'flex';
+            editMode.style.flexDirection = 'column'; // 縦並びを強制
             
-            // 🚀 スタイルの調整: Flexbox設定
-            editForm.style.display = 'flex';           
-            editForm.style.flexDirection = 'column';   
-            editForm.style.alignItems = 'stretch';     
-            editForm.style.gap = '4px';                
-            editForm.style.maxWidth = '100%'; 
-            editForm.style.boxSizing = 'border-box'; 
+            // 💡 絶対配置を強制し、セルから下に展開させる
+            editMode.style.position = 'absolute';
+            editMode.style.top = '100%';
+            editMode.style.left = '0';
+            editMode.style.zIndex = '10';
+            // 見た目の調整（CSSの上書き対策と視認性確保）
+            editMode.style.width = 'auto'; // 幅は内容物で決まる
+            editMode.style.whiteSpace = 'nowrap'; // 枠からはみ出すのを許可
+            editMode.style.backgroundColor = '#f8f9fa'; 
+            editMode.style.border = '1px solid #ccc';
+            editMode.style.padding = '5px';
             
-            input.focus();
-            input.select();
+            selectElement.focus();
         });
 
 
 	    // ==========================================================
-        // B. 「取消」ボタンクリック処理 (イベント委譲) (省略)
+        // B. 「取消」ボタンクリック処理 (イベント委譲)
         // ==========================================================
 
-	    // 1. 入出庫状況の取消
+	    // 1. 入出庫状況の取消 (既存ロジック維持 - CSSが制御)
 	    busTableBody.addEventListener('click', (e) => {
 	        const cancelButton = e.target.closest('.js-cancel-button-bus');
 	        if (!cancelButton) return;
@@ -249,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	        if (viewMode && editMode) {
 	            cell.classList.remove('is-editing');
 	            viewMode.style.display = 'inline';
-	            editMode.style.display = 'none';
+	            // editMode.style.display = 'none'; // CSSが制御
 	            
 	            const originalStatusId = cell.getAttribute('data-status-id');
 	            const selectElement = cell.querySelector('.js-bus-situation-select');
@@ -259,38 +268,28 @@ document.addEventListener('DOMContentLoaded', () => {
 	        }
 	    });
         
-        // 2. 乗車数の取消
+        // 2. 乗車数の取消 (💡 修正: JSで表示を確実に非表示にする)
         busTableBody.addEventListener('click', (e) => {
             const cancelButton = e.target.closest('.js-cancel-passengers-button');
             if (!cancelButton) return;
 
             const cell = cancelButton.closest('.js-passengers-field');
-            const input = cell.querySelector('.passengers-input');
+            const selectElement = cell.querySelector('.riders-select');
             const passengersText = cell.querySelector('.passengers-text');
-            const editForm = cell.querySelector('.passengers-edit-form');
+            const editMode = cell.querySelector('.edit-mode-select'); 
             
             if (cell && cell.classList.contains('is-editing')) {
-                // 元の値に戻す (データ属性から)
-                input.value = passengersText.dataset.originalValue || ''; 
+                // 元の値に戻す 
+                const originalValue = passengersText.dataset.originalValue || passengersText.textContent.replace('名', '').trim();
+                if (selectElement) selectElement.value = originalValue; 
                 
                 cell.classList.remove('is-editing');
 
                 // 表示モードに戻す
                 passengersText.style.display = 'inline';
-                editForm.style.display = 'none';
-                editForm.style.visibility = 'hidden';
                 
-                // 💡 スタイルをリセット
-                editForm.style.flexDirection = '';
-                editForm.style.alignItems = '';
-                editForm.style.gap = '';
-                editForm.style.maxWidth = ''; 
-                editForm.style.boxSizing = ''; 
-
-                input.style.width = ''; 
-                input.style.MozAppearance = ''; 
-                input.style.WebkitAppearance = ''; 
-                input.style.margin = ''; 
+                // 💡 修正: JSで編集モードを確実に非表示にする
+                editMode.style.display = 'none'; 
             }
         });
 
@@ -299,11 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // C. 「更新」ボタンクリック処理 (API連携) (イベント委譲)
         // ==========================================================
 
-		// 1. 入出庫状況の更新 - 💡 V8.5: ローカル通知を強制実行
+		// 1. 入出庫状況の更新 (既存ロジック維持 - CSSが制御)
         busTableBody.addEventListener('click', async (e) => {
             const updateButton = e.target.closest('.js-update-button-bus');
             if (!updateButton) return;
-
+            
             const cell = updateButton.closest('.js-bus-status');
             const row = updateButton.closest('tr');
             
@@ -317,16 +316,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!newValueId || newValueId.trim() === '') {
                  const errorMessage = '入出庫状況を選択してください。';
-                 // 💡 V8.5: ローカル通知関数でエラー表示
                  updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                  return;
             }
             
-            // common.jsのformatDate(new Date())を使用
             if (typeof formatDate === 'undefined') {
                 console.error("ERROR: formatDate関数がcommon.jsで見つかりません。");
                 const errorMessage = "時刻フォーマット関数が未定義です。common.jsを確認してください。";
-                // 💡 V8.5: ローカル通知関数でエラー表示
                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 return;
             }
@@ -334,17 +330,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let extraField = null;
             let extraValue = '';
-            // 選択されたオプションの表示名を取得
             const newStatusName = selectElement.options[selectElement.selectedIndex].textContent.trim();
             
             if (fieldName === 'busSituation') {
                 
-                // 🚀 下車出発済の場合、emptybusDepTimeを格納
                 if (newStatusName === '下車出発済') {
                     extraField = 'emptybusDepTime';
                     extraValue = currentTime;
                 } 
-                // 🚀 乗車出発済の場合、departureTimeを格納
                 else if (newStatusName === '乗車出発済') {
                     extraField = 'departureTime';
                     extraValue = currentTime;
@@ -365,19 +358,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // --- 成功時の画面表示更新ロジック ---
                 const viewMode = cell.querySelector('.view-mode-text');
-                const editMode = cell.querySelector('.edit-mode-select');
+                // const editMode = cell.querySelector('.edit-mode-select'); // CSS制御のため不要
                 
                 viewMode.textContent = newStatusName;
                 cell.setAttribute('data-status-id', newValueId); 
                 
-                // 最終更新日時 (12列目) を更新
                 const updateTimeCell = row.querySelector('.js-update-time-field'); 
                 
                 if (updateTimeCell) {
                      updateTimeCell.textContent = result.updateTime || currentTime; 
                 }
                 
-                // 🚀 出庫時刻欄 (5列目/7列目) を更新
                 if (fieldName === 'busSituation') {
                     if (newStatusName === '下車出発済') {
                         const emptyBusDepTimeCell = row.querySelector('.js-emptybus-dep-time-field'); 
@@ -391,13 +382,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 cell.classList.remove('is-editing');
                 viewMode.style.display = 'inline'; 
-                editMode.style.display = 'none'; 
+                // editMode.style.display = 'none'; // CSS制御
                 
                 if (typeof highlightCellAndId === 'function') {
                     highlightCellAndId(cell);
                 }
                 
-                // 💡 V8.5: ローカル通知関数でメッセージを強制表示
+                // ローカル通知関数でメッセージを強制表示
                 const successMessage = `ID: ${recordId} の 入出庫状況 を ${newStatusName} に更新しました。`;
                 updateOperationResultField(CONTENT_SELECTOR, true, successMessage);
 
@@ -407,17 +398,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('API呼び出しエラー:', error);
                 
                 const errorMessage = `ID: ${recordId} - 更新に失敗しました。詳細: ${error.message}`;
-                // 💡 V8.5: ローカル通知関数でエラー表示
                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 
                 cell.querySelector('.js-cancel-button-bus').click(); 
             }
         });
         
-        // 2. 乗車数の更新 - 💡 V8.5: async/await に修正し、ローカル通知を強制実行
+        // 2. 乗車数の更新 (セレクタ方式 - 💡 修正: JSで非表示を確実に制御)
         busTableBody.addEventListener('click', async (e) => {
             const updateButton = e.target.closest('.js-update-passengers-button');
             if (!updateButton) return;
+            
+            // 他の更新ロジックと競合しないよう、イベント伝播を停止
+            e.stopPropagation(); 
+            if (updateButton.tagName === 'BUTTON') {
+                 e.preventDefault();
+            } 
 
             const cell = updateButton.closest('.js-passengers-field');
             const row = updateButton.closest('tr');
@@ -425,36 +421,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const recordId = getBusRecordId(updateButton);
             if (!recordId) return; 
 
+            const selectElement = cell.querySelector('.riders-select'); 
             const passengersText = cell.querySelector('.passengers-text');
-            const input = cell.querySelector('.passengers-input');
-            const editForm = cell.querySelector('.passengers-edit-form');
-            
-            const originalValue = passengersText.dataset.originalValue;
-            const newValue = input.value.trim();
+            const editForm = cell.querySelector('.edit-mode-select');
 
+            const fieldName = 'passengers'; 
+            const newValue = selectElement.value; // 選択された数値 (文字列)
+            const newText = selectElement.options[selectElement.selectedIndex].textContent.trim();
+
+            if (!newValue || newValue.trim() === '') {
+                 const errorMessage = '乗車数を選択してください。';
+                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
+                 return;
+            }
+            
+            const originalValue = passengersText.dataset.originalValue; // data-original-valueから取得
             if (newValue === originalValue) {
                 cell.querySelector('.js-cancel-passengers-button').click();
                 return;
             }
 
-            const parsedValue = parseInt(newValue, 10);
-            if (isNaN(parsedValue) || newValue === '') {
-                const errorMessage = '乗車数には数値を入力してください。';
-                // 💡 V8.5: ローカル通知関数でエラー表示
-                updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
-                return;
-            }
-            if (parsedValue < 0) {
-                 const errorMessage = '乗車数は0以上の値を入力してください。';
-                 // 💡 V8.5: ローカル通知関数でエラー表示
-                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
-                 return;
-            }
-            
             if (typeof formatDate === 'undefined') {
                  console.error("ERROR: formatDate関数がcommon.jsで見つかりません。");
                  const errorMessage = "時刻フォーマット関数が未定義です。common.jsを確認してください。";
-                 // 💡 V8.5: ローカル通知関数でエラー表示
                  updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                  cell.querySelector('.js-cancel-passengers-button').click();
                  return;
@@ -466,18 +455,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await sendUpdateToServer(
                     '/api/bus/update', 
                     recordId, 
-                    'passengers', 
+                    fieldName, 
                     newValue, 
                     null, 
                     null,
-                    TARGET_TAB_ID // Tab IDを明示的に渡す
+                    TARGET_TAB_ID 
                 );
 
                 // --- 成功時のロジック ---
                 const updateTimeCell = row.querySelector('.js-update-time-field');
                         
-                passengersText.textContent = parsedValue + '名';
-                passengersText.dataset.originalValue = parsedValue; 
+                passengersText.textContent = newText + '名';
+                passengersText.dataset.originalValue = newText; 
                 
                 if (updateTimeCell) {
                     updateTimeCell.textContent = result.updateTime || currentTime;
@@ -486,33 +475,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 表示モードに戻す
                 cell.classList.remove('is-editing');
                 passengersText.style.display = 'inline';
-                editForm.style.display = 'none';
-                editForm.style.visibility = 'hidden'; 
                 
-                // 💡 スタイルをリセット
-                editForm.style.flexDirection = '';
-                editForm.style.alignItems = '';
-                editForm.style.gap = '';
-                editForm.style.maxWidth = ''; 
-                editForm.style.boxSizing = ''; 
-
-                input.style.width = ''; 
-                input.style.MozAppearance = ''; 
-                input.style.WebkitAppearance = ''; 
-                input.style.margin = ''; 
+                // 💡 修正: JSで編集モードを確実に非表示にする
+                editForm.style.display = 'none'; 
                 
                 if (typeof highlightCellAndId === 'function') {
                     highlightCellAndId(cell);
                 }
 
-                // 💡 V8.5: ローカル通知関数でメッセージを強制表示
-                const successMessage = `ID: ${recordId} の 乗車数 を ${parsedValue}名 に更新しました。`;
+                // ローカル通知関数でメッセージを強制表示
+                const successMessage = `ID: ${recordId} の 乗車数 を ${newText}名 に更新しました。`;
                 updateOperationResultField(CONTENT_SELECTOR, true, successMessage);
 
             } catch (error) {
                 // 失敗時のロジック
                 const errorMessage = `ID: ${recordId} - 乗車人数の更新に失敗しました: ${error.message || '不明なエラー'}`;
-                // 💡 V8.5: ローカル通知関数でエラー表示
                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 console.error('Update error:', error);
                 cell.querySelector('.js-cancel-passengers-button').click();

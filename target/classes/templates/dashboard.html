@@ -306,20 +306,19 @@
 			                    <td data-label="手配両家名" class="group-2-col" th:text="${bus.familyNames}"></td>
 			                    <td data-label="担当" class="group-2-col" th:text="${bus.managerName}"></td>
 			                    
-			                    <td data-label="乗車数" class="js-passengers-field group-2-col">
-											    <span class="passengers-text" th:text="${bus.passengers} + '名'" th:data-original-value="${bus.passengers}"></span>
-											    
-											    <form class="passengers-edit-form" style="display: none; visibility: hidden;">
-											        <input type="number" 
-											               th:value="${bus.passengers}" 
-											               class="passengers-input js-input-value" 
-											               min="0" 
-											               pattern="[0-9]*"
-											               style="width: 60px;">
-											        <button type="button" class="update-passengers-button js-update-passengers-button">更新</button> 
-											        <button type="button" class="cancel-passengers-button js-cancel-passengers-button">取消</button>
-											    </form>
-											</td>
+								<td data-label="乗車数" 
+								    class="js-passengers-field group-2-col"
+								    style="position: relative;"> <span class="passengers-text" th:text="${bus.passengers} + '名'" th:data-original-value="${bus.passengers}"></span>
+								    
+								    <div class="edit-mode-select" style="display: none; white-space: nowrap;">
+								        
+								        <select class="form-select form-select-sm riders-select" style="width: 70px;">
+								        </select> 
+								        
+								        <button type="button" class="update-passengers-button js-update-passengers-button btn btn-primary btn-sm">更新</button> 
+								        <button type="button" class="cancel-passengers-button js-cancel-passengers-button btn btn-secondary btn-sm">取消</button>
+								    </div>
+								</td>
 											
 											<td data-label="入出庫状況" 
 											    class="js-bus-status group-2-col" 
