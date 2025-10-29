@@ -5,6 +5,7 @@
  * * 1. 乗車数（js-passengers-field）の編集モードの表示・位置制御を、JavaScriptによるスタイル強制にて実装。
  * * 2. 備考欄を含む全フィールドに対し、common.js と連携するリアルタイム更新関数 window.updateBusRow を定義。
  * * 3. 備考欄の表示要素を .remarks-text に修正し、リモート更新を可能にした。
+ * * 4. 【修正適用】common.jsのformatDate変更に対応し、出庫時刻フィールドにフルタイムスタンプ(YYYY/MM/DD/HH:mm)を直接設定するよう修正。
  */
 
 // 💡 TARGET_TAB_ID と CONTENT_SELECTOR はグローバルまたはDOMContentLoaded外で定義し、
@@ -368,7 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
                 return;
             }
-            const currentTime = formatDate(new Date());
+            // common.jsの修正により、currentTimeは YYYY/MM/DD/HH:mm 形式になっている
+            const currentTime = formatDate(new Date()); 
 
             let extraField = null;
             let extraValue = '';
@@ -378,11 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (newStatusName === '下車出発済') {
                     extraField = 'emptybusDepTime';
-                    extraValue = currentTime;
+                    extraValue = currentTime; // フルタイムスタンプを送信
                 } 
                 else if (newStatusName === '乗車出発済') {
                     extraField = 'departureTime';
-                    extraValue = currentTime;
+                    extraValue = currentTime; // フルタイムスタンプを送信
                 }
             }
             
@@ -401,19 +403,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 viewMode.textContent = newStatusName;
                 cell.setAttribute('data-status-id', newValueId); 
                 
+                // 時刻表示の更新
+                const actualUpdateTime = result.updateTime || currentTime; 
+                
                 const updateTimeCell = row.querySelector('.js-update-time-field'); 
-                if (updateTimeCell) updateTimeCell.textContent = result.updateTime || currentTime; 
+                if (updateTimeCell) updateTimeCell.textContent = actualUpdateTime; 
                 
                 if (fieldName === 'busSituation') {
-                    const timePart = (result.updateTime || currentTime).split(' ')[1] || '';
-
+                    
                     if (newStatusName === '下車出発済') {
                         const emptyBusDepTimeCell = row.querySelector('.js-emptybus-dep-time-field'); 
-                        if (emptyBusDepTimeCell) emptyBusDepTimeCell.textContent = timePart;
+                        // 💡 修正適用: フルタイムスタンプを直接設定
+                        if (emptyBusDepTimeCell) emptyBusDepTimeCell.textContent = actualUpdateTime; 
                     } 
                     else if (newStatusName === '乗車出発済') {
                         const depTimeCell = row.querySelector('td:nth-child(7)'); 
-                        if (depTimeCell) depTimeCell.textContent = timePart;
+                         // 💡 修正適用: フルタイムスタンプを直接設定
+                        if (depTimeCell) depTimeCell.textContent = actualUpdateTime; 
                     }
                 }
                 
@@ -464,13 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newValue === originalValue) {
                 cell.querySelector('.js-cancel-passengers-button').click();
                 return;
-            }
-
-            if (typeof formatDate === 'undefined') {
-                 const errorMessage = "時刻フォーマット関数が未定義です。common.jsを確認してください。";
-                 updateOperationResultField(CONTENT_SELECTOR, false, errorMessage);
-                 cell.querySelector('.js-cancel-passengers-button').click();
-                 return;
             }
 
             try {
@@ -583,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * * @param {string} id - 更新されたレコードID (data-bus-id)
  * @param {string} field - 更新されたフィールド名 (e.g., 'busSituation', 'passengers', 'remarksColumn')
  * @param {string} newValue - 更新後のIDまたは値 (e.g., '101', '5', '新しいコメント')
- * @param {string} updateTime - 更新時刻 (e.g., '2025/10/29 14:30:00')
+ * @param {string} updateTime - 更新時刻 (e.g., '2025/10/29/14:30' - common.jsのformatDate形式)
  */
 window.updateBusRow = function(id, field, newValue, updateTime) {
     console.log(`DEBUG: Remote update received for Bus ID ${id}. Field: ${field}, Value: ${newValue}`);
@@ -614,11 +613,14 @@ window.updateBusRow = function(id, field, newValue, updateTime) {
             targetCell.querySelector('.view-mode-text').textContent = newDisplayValue;
             targetCell.setAttribute('data-status-id', newValue); 
             
-            const timePart = updateTime.split(' ')[1] || ''; 
+            // 💡 修正適用: リモート更新時もフルタイムスタンプを直接設定
             if (newDisplayValue === '下車出発済') {
-                row.querySelector('.js-emptybus-dep-time-field').textContent = timePart;
+                const emptyBusDepTimeCell = row.querySelector('.js-emptybus-dep-time-field');
+                // updateTimeは YYYY/MM/DD/HH:mm 形式
+                if (emptyBusDepTimeCell) emptyBusDepTimeCell.textContent = updateTime; 
             } else if (newDisplayValue === '乗車出発済') {
-                row.querySelector('td:nth-child(7)').textContent = timePart; 
+                const depTimeCell = row.querySelector('td:nth-child(7)'); 
+                if (depTimeCell) depTimeCell.textContent = updateTime; 
             }
         }
 

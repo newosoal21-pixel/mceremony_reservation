@@ -130,8 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
 	    defaultOption.value = '';
 	    defaultOption.textContent = '選択してください';
 	    selectElement.appendChild(defaultOption);
+        
+        // 💡 修正適用: parkingStatusesData を statusId に基づいて昇順ソートする
+        // statusIdが数値であることを前提とします
+        const sortedStatuses = parkingStatusesData.slice().sort((a, b) => {
+            return Number(a.statusId) - Number(b.statusId);
+        });
 
-	    parkingStatusesData.forEach(status => {
+	    sortedStatuses.forEach(status => {
 	        const option = document.createElement('option');
 	        option.value = status.statusId;      
 	        option.textContent = status.statusName; 
