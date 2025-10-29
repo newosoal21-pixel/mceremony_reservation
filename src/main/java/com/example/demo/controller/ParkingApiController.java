@@ -1,13 +1,16 @@
 package com.example.demo.controller;
 
+// 標準Javaユーティリティ
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+// Jakarta Persistence (JPA)
 import jakarta.persistence.EntityNotFoundException;
 
+// Spring Framework
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,66 +20,86 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+// アプリケーション固有のモデルとリポジトリ、サービス
 import com.example.demo.model.Parking;
 import com.example.demo.model.ParkingStatus;
 import com.example.demo.repository.ParkingRepository;
 import com.example.demo.repository.ParkingStatusRepository;
-// 💡 追加: WebSocket通知サービスをインポート
 import com.example.demo.service.UpdateNotificationService; 
 
+/**
+ * 駐車場関連のREST APIを提供するコントローラークラス。
+ * ベースパスは /api/parking
+ */
 @RestController
 @RequestMapping("/api/parking")
 public class ParkingApiController {
 
+    // --- 依存性の注入 (DI) 対象フィールド ---
     private final ParkingRepository parkingRepository;
     private final ParkingStatusRepository parkingStatusRepository;
-    // 💡 修正: 通知サービスをメンバ変数として定義
     private final UpdateNotificationService notificationService;
     
-    // 💡 修正: 日時フォーマッタを定義
+    // --- 定数フィールド ---
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
 
+    /**
+     * コンストラクタインジェクション。
+     * 必要なリポジトリと通知サービスをSpringコンテナから受け取る。
+     */
     @Autowired
     public ParkingApiController(ParkingRepository parkingRepository,
                                 ParkingStatusRepository parkingStatusRepository,
-                                // 💡 修正: 通知サービスをコンストラクタに追加
                                 UpdateNotificationService notificationService) {
         this.parkingRepository = parkingRepository;
         this.parkingStatusRepository = parkingStatusRepository;
-        this.notificationService = notificationService; // 💡 注入
+        this.notificationService = notificationService; 
     }
     
+    // ----------------------------------------------------------------------
+    // --- API エンドポイント定義 ---
+    // ----------------------------------------------------------------------
+    
     /**
-     * 駐車場利用状況の選択肢データをJSON形式で返すAPIエンドポイント。
+     * GET /api/parking/statuses
+     * 駐車場利用状況（ParkingStatus）のマスターデータをJSON形式で返す。
+     * @return ParkingStatusのリスト
      */
     @GetMapping("/statuses")
     public List<ParkingStatus> getParkingStatusesApi() {
+        // findAll()のデフォルトソート（通常はID順）で全件返す
         return parkingStatusRepository.findAll();
     }
     
     /**
-     * 駐車証No.、駐車位置、車両ナンバー、利用状況、および出庫時刻を更新するAPIエンドポイント
+     * POST /api/parking/update
+     * 特定の駐車場予約レコードの単一フィールドを更新する。
+     * 必要に応じて、出庫時刻（departureTime）も同時に更新する。
+     * @param payload 更新対象のID、フィールド名、値を含むマップ
+     * @return 成功メッセージまたはエラーメッセージを含むJSONマップ
      */
     @PostMapping("/update")
-    @Transactional 
+    @Transactional // トランザクション管理を有効化
     public ResponseEntity<Map<String, String>> updateParkingField(@RequestBody Map<String, String> payload) {
         
-    	// デバッグログの出力（省略可）
     	System.out.println("API受信データ - ID: " + payload.get("id"));
         
+        // リクエストボディからパラメータを取得
         String idStr = payload.get("id");
         String field = payload.get("field");
         String valueStr = payload.get("value"); 
         
-        String extraField = payload.get("extraField");
-        String extraValueStr = payload.get("extraValue");
+        String extraField = payload.get("extraField"); // 付随する時刻フィールド名 (departureTimeを想定)
+        String extraValueStr = payload.get("extraValue"); // 付随する時刻フィールドの値
         
+        // 必須パラメータのチェック
         if (idStr == null || field == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "必須データ（IDまたはフィールド名）が不足しています。"));
         }
         
         try {
+            // 1. IDで予約レコードを検索
             Integer id = Integer.parseInt(idStr);
             Optional<Parking> optionalParking = parkingRepository.findById(id);
 
@@ -88,23 +111,25 @@ public class ParkingApiController {
             boolean isValueBlank = (valueStr == null || valueStr.trim().isEmpty());
             
             String updateMessage = null; 
-            // 💡 通知用: クライアントに送るメインフィールドの最終値
-            String notificationValue = valueStr; 
+            String notificationValue = valueStr; // WebSocket通知用のメインフィールド値
             
-            // --- メインフィールドの更新処理 ---
+            // --- 2. メインフィールドの更新処理 ---
             if ("parkingPermit".equals(field)) {
+                // 駐車証No.
                 String valueToSet = isValueBlank ? null : valueStr.trim();
                 parking.setParkingPermit(valueToSet);
                 updateMessage = "駐車証No.が更新されました。";
                 notificationValue = valueToSet;
                 
             } else if ("parkingPosition".equals(field)) {
+                // 駐車位置
                 String valueToSet = isValueBlank ? null : valueStr.trim();
                 parking.setParkingPosition(valueToSet);
                 updateMessage = "駐車位置が更新されました。";
                 notificationValue = valueToSet;
                 
             } else if ("carNumber".equals(field)) {
+                // 車両ナンバー (必須)
                 if (isValueBlank) {
                     return ResponseEntity.badRequest().body(Map.of("message", "車両ナンバーは必須です。"));
                 }
@@ -113,7 +138,7 @@ public class ParkingApiController {
                 notificationValue = valueStr.trim();
                 
             } else if ("parkingStatus".equals(field)) { 
-                
+                // 駐車状況 (マスター参照)
                 if (isValueBlank) {
                     return ResponseEntity.badRequest().body(Map.of("message", "利用状況は必須です。"));
                 }
@@ -122,16 +147,17 @@ public class ParkingApiController {
                 Optional<ParkingStatus> optionalStatus = parkingStatusRepository.findById(newStatusId);
                 
                 if (optionalStatus.isEmpty()) {
+                    // 参照整合性エラー: 存在しないParkingStatus ID
                     throw new EntityNotFoundException("ParkingStatus ID " + newStatusId + " が見つかりません");
                 }
                 
                 ParkingStatus newStatus = optionalStatus.get();
                 parking.setParkingStatus(newStatus);
                 updateMessage = "駐車状況が「" + newStatus.getStatusName() + "」に更新されました。";
-                // 💡 ParkingStatusの場合はID (valueStr) を通知
                 notificationValue = valueStr; 
                 
             } else if ("remarksColumn".equals(field)) {
+                // 備考欄
                 String valueToSet = isValueBlank ? null : valueStr.trim();
                 parking.setRemarksColumn(valueToSet); 
                 updateMessage = "備考欄が更新されました。";
@@ -141,54 +167,50 @@ public class ParkingApiController {
                 return ResponseEntity.badRequest().body(Map.of("message", "無効なフィールド名です。"));
             }
 
-            // --- 💡 追加: 追加フィールド (extraField) の更新処理 ---
-            // 💡 通知用: クライアントに送るExtraFieldの最終値
+            // --- 3. 追加フィールド (出庫時刻) の更新処理 ---
             String notificationExtraValue = null; 
             
             if ("departureTime".equals(extraField)) {
                 boolean isExtraValueBlank = (extraValueStr == null || extraValueStr.trim().isEmpty());
                 
                 if (isExtraValueBlank) {
+                    // 値がない場合は時刻をクリア (NULL)
                     parking.setDepartureTime(null);
-                    notificationExtraValue = ""; // クライアントに空文字列として通知 (リセット用)
+                    notificationExtraValue = ""; 
                 } else {
                     try {
-                        // クライアントから送られてきた時刻文字列をパース
+                        // 時刻文字列をパース
                         LocalDateTime newDepartureTime = LocalDateTime.parse(extraValueStr, DATETIME_FORMATTER);
                         parking.setDepartureTime(newDepartureTime);
-                        notificationExtraValue = extraValueStr; // クライアントにフォーマット済み時刻を通知
+                        notificationExtraValue = extraValueStr; 
                     } catch (java.time.format.DateTimeParseException e) {
                         System.err.println("日付パースエラー: " + extraValueStr);
-                        // パース失敗時は更新しない (例外はthrowせず、通知データには影響なしとする)
+                        // 時刻データの形式が不正な場合は、メインフィールドの更新のみを続行する
                     }
                 }
-                // 出庫時刻の更新も通知対象とする (メインフィールドの通知メッセージに追加)
+                
+                // メッセージの統合
                 if (updateMessage != null) {
                     updateMessage += " (出庫時刻も更新)"; 
                 } else {
-                    // もしextraFieldのみが更新された場合
+                    // メインフィールドの更新がなく、extraFieldのみが更新された場合
                     updateMessage = "出庫時刻が更新されました。"; 
                     field = extraField; // 通知フィールドをdepartureTimeに設定
-                    // notificationValue は空で良い
+                    notificationValue = ""; // メインフィールドの値は通知しない
                 }
             }
-            // --- 💡 追加フィールド処理 終わり ---
             
-
-            // 共通の更新日時をセット
+            // 4. 最終更新時刻を設定して保存
             LocalDateTime currentUpdateTime = LocalDateTime.now();
             parking.setUpdateTime(currentUpdateTime);
             
-            // データベースに保存（更新）
             parkingRepository.save(parking);
             
-            // 💡 最終更新時刻をクライアント形式に変換
             String updateTimeStr = currentUpdateTime.format(DATETIME_FORMATTER);
             
-            // 💡 修正: WebSocketで全クライアントに更新を通知
+            // 5. WebSocket通知
             if (updateMessage != null && field != null) {
-                
-                // 💡 通知サービスに必要な全ての情報を渡す
+                // 更新内容をリアルタイムで全クライアントに通知する
                 notificationService.notifyClients(
                     idStr, 
                     field, 
@@ -201,17 +223,20 @@ public class ParkingApiController {
                 );
             }
             
-            // 💡 修正: レスポンスに更新時刻を追加
+            // 6. 成功レスポンス
             return ResponseEntity.ok(Map.of("status", "success", 
                                             "message", updateMessage, 
-                                            "updateTime", updateTimeStr 
+                                            "updateTime", updateTimeStr // 更新時刻をレスポンスに含める
                                             ));
             
         } catch (NumberFormatException e) {
+            // IDや数値フィールドのパース失敗
             return ResponseEntity.badRequest().body(Map.of("message", "IDまたは更新値の形式が不正です。"));
         } catch (EntityNotFoundException e) {
+            // 参照先のParkingStatusが見つからない場合など
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
+            // その他の予期せぬエラー
             System.err.println("DB更新エラー: " + e.getMessage());
             e.printStackTrace(); 
             return ResponseEntity.internalServerError().body(Map.of("message", "サーバー側で更新中にエラーが発生しました。"));
