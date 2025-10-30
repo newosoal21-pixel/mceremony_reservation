@@ -51,7 +51,59 @@
 ![式場運営予約管理アプリER図](screenshot/式場運営予約管理_ER図.png)
 
 ---
+-----
 
+## 📂 ディレクトリ図
+
+```
+src/
+└── main/
+    └── java/
+        └── com/
+            └── example/
+                └── demo/
+                    ├── ClemonyReservationApplication.java
+                    ├── Hashin.java
+                    |
+                    ├── config/
+                    |   ├── LoginSuccessHandler.java
+                    |   └── SecurityConfig.java
+                    |
+                    ├── controller/
+                    |   ├── AdminController.java
+                    |   ├── BusApiController.java
+                    |   ├── CombinedListController.java
+                    |   ├── DataImportController.java
+                    |   ├── EmployeeController.java
+                    |   ├── LoginController.java
+                    |   ├── ParkingApiController.java
+                    |   ├── ParkingController.java
+                    |   └── VisitApiController.java
+                    |
+                    ├── model/
+                    |   ├── BusSituation.java
+                    |   ├── Department.java
+                    |   ├── Employee.java
+                    |   ├── Parking.java
+                    |   ├── ParkingStatus.java
+                    |   ├── ShuttleBusReservation.java
+                    |   ├── Visitor.java
+                    |   └── VisitSituation.java
+                    |
+                    ├── repository/
+                    |   ├── BusSituationRepository.java
+                    |   ├── DepartmentRepository.java
+                    |   ├── EmployeeRepository.java
+                    |   ├── ParkingRepository.java
+                    |   ├── ParkingStatusRepository.java
+                    |   ├── ShuttleBusReservationRepository.java
+                    |   ├── VisitorRepository.java
+                    |   └── VisitSituationRepository.java
+                    |
+                    └── service/
+                        ├── CsvService.java
+                        └── EmployeeUserDetailsService.java
+```
 
 ## ⚙️ 各機能の詳細
 
