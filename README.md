@@ -48,7 +48,7 @@
 
 プロジェクトのデータベース構造を示すER図です。
 
-![式場運営予約管理アプリER図](screenshot/gohanER.png)
+![式場運営予約管理アプリER図](screenshot/式場運営予約管理_ER図.png)
 
 ---
 
