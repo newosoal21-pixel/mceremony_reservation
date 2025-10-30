@@ -49,8 +49,8 @@ INSERT INTO `departments` (`department_id`, `department_name`) VALUES (2, 'MZコ
 INSERT INTO `departments` (`department_id`, `department_name`) VALUES (3, '施設管理');
 
 -- employees (カラム名を`employee_id`に修正)
-INSERT INTO `employees` (`employee_id`, `password_hash`, `user_name`, `is_admin`, `delete_flag`,`department_id`) VALUES (1001, '$2a$10$UWazlPXsjzOxFCWp1DhZeuPMAoiUBwICMsYZbyCBTKk0vhZpECjJW', '石田新', TRUE, FALSE, 1);
-INSERT INTO `employees` (`employee_id`, `password_hash`, `user_name`, `is_admin`, `delete_flag`,`department_id`) VALUES (1002, '$2a$10$TfTUD5Z84hPguJitjKGsyedKHtK5zujFMAomsZEqwkfMeLayEvEzS', '根室東', FALSE, FALSE, 2);
+INSERT INTO `employees` (`employee_id`, `password_hash`, `user_name`, `is_admin`, `delete_flag`,`department_id`) VALUES (1001, '$2a$10$rbg74Xku2KEXyhity077ye24VoaIlmAdCxvCuBLN8m.LzoS4Ur0/.', '管理者', TRUE, FALSE, 1);
+INSERT INTO `employees` (`employee_id`, `password_hash`, `user_name`, `is_admin`, `delete_flag`,`department_id`) VALUES (1002, '$2a$10$TfTUD5Z84hPguJitjKGsyedKHtK5zujFMAomsZEqwkfMeLayEvEzS', 'ユーザー', FALSE, FALSE, 2);
 
 -- parking_statuses
 INSERT INTO `parking_statuses` (`parking_status_id`, `parking_status_name`) VALUES (1, '予約中');
